@@ -1,0 +1,255 @@
+.simulation-page {
+  display: grid;
+  gap: 24px;
+}
+
+.simulation-body {
+  padding: 24px;
+  min-width: 0;
+}
+
+.simulation-instructions {
+  margin: 0 0 20px;
+  color: #53657d;
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+.simulation-columns {
+  margin-bottom: 24px;
+  padding: 14px 16px;
+  border: 1px solid #dce5f1;
+  border-radius: 8px;
+  background: #f8faff;
+}
+
+.simulation-columns summary {
+  cursor: pointer;
+  color: #285ca8;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.simulation-columns ol {
+  columns: 2;
+  margin: 18px 0 0;
+  padding-left: 24px;
+  color: #53657d;
+  font-size: 13px;
+  line-height: 1.9;
+}
+
+.simulation-columns li {
+  break-inside: avoid;
+}
+
+.simulation-label {
+  display: block;
+  margin-bottom: 10px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.simulation-input {
+  display: block;
+  width: 100%;
+  min-height: 250px;
+  padding: 16px;
+  resize: vertical;
+  border: 1px solid #c9d5e5;
+  border-radius: 10px;
+  background: #ffffff;
+  color: #182b45;
+  font-family: Consolas, monospace;
+  font-size: 12px;
+  line-height: 1.7;
+  white-space: pre;
+  overflow-wrap: normal;
+  overflow-x: auto;
+}
+
+.simulation-input:focus {
+  border-color: #2563df;
+  outline: 3px solid #e2ecff;
+}
+
+.simulation-help {
+  margin: 12px 0;
+  color: #627189;
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+.simulation-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.simulation-actions .secondary-button {
+  margin-top: 0;
+}
+
+.simulation-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.simulation-errors {
+  padding: 24px;
+  border: 1px solid #efc1c1;
+  border-radius: 12px;
+  background: #fff5f5;
+  color: #922d2d;
+}
+
+.simulation-errors h2 {
+  margin: 0 0 12px;
+  font-size: 17px;
+}
+
+.simulation-errors p,
+.simulation-errors li {
+  font-size: 13px;
+  line-height: 1.8;
+}
+
+.simulation-errors ul {
+  margin-bottom: 0;
+  padding-left: 20px;
+}
+
+.simulation-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.simulation-summary article {
+  padding: 22px;
+  border: 1px solid #dce5f1;
+  border-radius: 12px;
+  background: #ffffff;
+}
+
+.simulation-summary span {
+  display: block;
+  color: #53657d;
+  font-size: 13px;
+}
+
+.simulation-summary strong {
+  display: block;
+  margin-top: 14px;
+  font-size: 30px;
+  font-variant-numeric: tabular-nums;
+}
+
+.simulation-success {
+  padding: 16px 20px;
+  border: 1px solid #b9dfc9;
+  border-radius: 10px;
+  background: #edf9f1;
+  color: #23633e;
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.shipment-list {
+  display: grid;
+  gap: 12px;
+}
+
+.shipment-detail {
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid #dce5f1;
+  border-radius: 9px;
+}
+
+.shipment-detail > summary {
+  padding: 16px;
+  background: #f8faff;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.shipment-count {
+  display: inline-block;
+  margin-left: 16px;
+  color: #627189;
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.shipment-table-wrap {
+  overflow-x: auto;
+}
+
+.shipment-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 12px;
+}
+
+.shipment-table caption {
+  padding: 12px 16px;
+  text-align: left;
+  color: #627189;
+}
+
+.shipment-table th,
+.shipment-table td {
+  padding: 12px 16px;
+  border-bottom: 1px solid #e9edf3;
+  vertical-align: top;
+}
+
+.shipment-table th {
+  background: #f1f5fa;
+  color: #455b76;
+  white-space: nowrap;
+  font-weight: 600;
+}
+
+.shipment-table td {
+  max-width: 320px;
+  min-width: 90px;
+  overflow-wrap: anywhere;
+  color: #263d5b;
+}
+
+.shipment-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.shipment-preview-note {
+  margin: 0;
+  padding: 12px 16px;
+  background: #f8faff;
+  color: #627189;
+  font-size: 12px;
+}
+
+@media (max-width: 760px) {
+  .simulation-body {
+    padding: 18px;
+  }
+
+  .simulation-summary {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .simulation-columns ol {
+    columns: 1;
+  }
+
+  .simulation-input {
+    min-height: 220px;
+  }
+}

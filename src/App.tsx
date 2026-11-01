@@ -1,4 +1,5 @@
 import { useState } from "react";
+import NewSimulation from "./NewSimulation";
 
 const pages = [
   {
@@ -53,6 +54,65 @@ const indicators = [
   },
 ];
 
+function DashboardOverview() {
+  return (
+    <>
+      <section
+        className="indicator-grid"
+        aria-label="Indicadores de frete"
+      >
+        {indicators.map((indicator) => (
+          <article className="indicator-card" key={indicator.label}>
+            <h2>{indicator.label}</h2>
+            <strong className="indicator-value">—</strong>
+            <p>{indicator.detail}</p>
+          </article>
+        ))}
+      </section>
+
+      <section className="panel">
+        <div className="panel-heading">
+          <h2>Resultados das simulações</h2>
+          <span>Visão geral</span>
+        </div>
+
+        <div className="empty-state">
+          <div className="empty-symbol" aria-hidden="true">
+            ≡
+          </div>
+
+          <h3>Seus resultados aparecerão aqui</h3>
+
+          <p>
+            Após a integração, você poderá acompanhar os custos,
+            as recomendações e a economia confirmada.
+          </p>
+        </div>
+      </section>
+
+      <section className="explanation-grid">
+        <article className="explanation-card">
+          <h2>Economia potencial</h2>
+
+          <p>
+            Diferença entre o custo original e a melhor opção
+            elegível encontrada pelo simulador.
+          </p>
+        </article>
+
+        <article className="explanation-card">
+          <h2>Economia realizada</h2>
+
+          <p>
+            Considera somente as recomendações cuja aplicação
+            foi confirmada pela operação.
+          </p>
+        </article>
+      </section>
+    </>
+  );
+}
+
 export default function App({ role }: AppProps) {
   const [activePage, setActivePage] = useState<PageId>("dashboard");
 
@@ -63,7 +123,35 @@ export default function App({ role }: AppProps) {
   const currentPage =
     visiblePages.find((page) => page.id === activePage) ?? pages[0];
 
-  const isDashboard = currentPage.id === "dashboard";
+  function renderPage() {
+    if (currentPage.id === "dashboard") {
+      return <DashboardOverview />;
+    }
+
+    if (currentPage.id === "simulation") {
+      return <NewSimulation />;
+    }
+
+    return (
+      <section className="panel">
+        <div className="empty-state">
+          <h2>{currentPage.label}</h2>
+
+          <p>
+            Esta área será implementada nas próximas etapas.
+          </p>
+
+          <button
+            type="button"
+            className="secondary-button"
+            onClick={() => setActivePage("dashboard")}
+          >
+            Voltar ao dashboard
+          </button>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <div className="app-layout">
@@ -123,7 +211,7 @@ export default function App({ role }: AppProps) {
               </p>
             </div>
 
-            {isDashboard && (
+            {currentPage.id === "dashboard" && (
               <button
                 type="button"
                 className="primary-button"
@@ -135,87 +223,11 @@ export default function App({ role }: AppProps) {
           </div>
 
           <div className="development-notice">
-            Sistema em desenvolvimento. As simulações, as tarifas e os
-            indicadores ainda não estão disponíveis para uso operacional.
+            Sistema em desenvolvimento. Os cálculos de frete e a
+            gravação do histórico ainda não estão disponíveis.
           </div>
 
-          {isDashboard ? (
-            <>
-              <section
-                className="indicator-grid"
-                aria-label="Indicadores de frete"
-              >
-                {indicators.map((indicator) => (
-                  <article
-                    className="indicator-card"
-                    key={indicator.label}
-                  >
-                    <h2>{indicator.label}</h2>
-                    <strong className="indicator-value">—</strong>
-                    <p>{indicator.detail}</p>
-                  </article>
-                ))}
-              </section>
-
-              <section className="panel">
-                <div className="panel-heading">
-                  <h2>Resultados das simulações</h2>
-                  <span>Visão geral</span>
-                </div>
-
-                <div className="empty-state">
-                  <div className="empty-symbol" aria-hidden="true">
-                    ≡
-                  </div>
-
-                  <h3>Seus resultados aparecerão aqui</h3>
-
-                  <p>
-                    Após a integração, você poderá acompanhar os custos,
-                    as recomendações e a economia confirmada.
-                  </p>
-                </div>
-              </section>
-
-              <section className="explanation-grid">
-                <article className="explanation-card">
-                  <h2>Economia potencial</h2>
-
-                  <p>
-                    Diferença entre o custo original e a melhor opção
-                    elegível encontrada pelo simulador.
-                  </p>
-                </article>
-
-                <article className="explanation-card">
-                  <h2>Economia realizada</h2>
-
-                  <p>
-                    Considera somente as recomendações cuja aplicação
-                    foi confirmada pela operação.
-                  </p>
-                </article>
-              </section>
-            </>
-          ) : (
-            <section className="panel">
-              <div className="empty-state">
-                <h2>{currentPage.label}</h2>
-
-                <p>
-                  Esta área será implementada nas próximas etapas.
-                </p>
-
-                <button
-                  type="button"
-                  className="secondary-button"
-                  onClick={() => setActivePage("dashboard")}
-                >
-                  Voltar ao dashboard
-                </button>
-              </div>
-            </section>
-          )}
+          {renderPage()}
         </main>
       </div>
     </div>

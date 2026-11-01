@@ -1,4 +1,4 @@
-import { Fragment, useState } from "react";
+  import { Fragment, useState } from "react";
 import {
   REQUIRED_HEADERS,
   readShipments,
@@ -11,6 +11,9 @@ import {
 } from "./utils/calculateFreight";
 import type { FreightCalculationResult } from "./utils/calculateFreight";
 import { getActiveFreightDatasets } from "./lib/freightDatasets";
+import SimulationDecisions from "./SimulationDecisions";
+import { createFreightSimulationRequestId } from "./lib/freightSimulations";
+import type { SaveFreightSimulationInput } from "./lib/freightSimulations";
 import "./NewSimulation.css";
 
 const PAGE_SIZE = 25;
@@ -95,8 +98,13 @@ function Pagination({
 export default function NewSimulation() {
   const [text, setText] = useState("");
   const [result, setResult] = useState<ShipmentReadResult | null>(null);
+
   const [calculation, setCalculation] =
     useState<FreightCalculationResult | null>(null);
+
+  const [simulationToSave, setSimulationToSave] =
+    useState<SaveFreightSimulationInput | null>(null);
+
   const [isCalculating, setIsCalculating] = useState(false);
   const [calculationError, setCalculationError] = useState("");
 
@@ -104,6 +112,7 @@ export default function NewSimulation() {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [inputPage, setInputPage] = useState(1);
+
   const [expandedShipment, setExpandedShipment] =
     useState<string | null>(null);
 
@@ -211,6 +220,7 @@ export default function NewSimulation() {
     setResult(null);
     setCalculation(null);
     setCalculationError("");
+    setSimulationToSave(null);
     setInputPage(1);
     resetResultsView();
   }
@@ -219,6 +229,7 @@ export default function NewSimulation() {
     setResult(readShipments(text));
     setCalculation(null);
     setCalculationError("");
+    setSimulationToSave(null);
     setInputPage(1);
     resetResultsView();
   }
@@ -235,17 +246,28 @@ export default function NewSimulation() {
     setIsCalculating(true);
     setCalculation(null);
     setCalculationError("");
+    setSimulationToSave(null);
     resetResultsView();
 
     try {
       const activeDatasets = await getActiveFreightDatasets();
 
-      setCalculation(
-        calculateFreight(
-          normalization.shipments,
-          activeDatasets,
-        ),
+      const freightResult = calculateFreight(
+        normalization.shipments,
+        activeDatasets,
       );
+
+      setCalculation(freightResult);
+
+      if (freightResult.success) {
+        setSimulationToSave({
+          requestId: createFreightSimulationRequestId(),
+          sourceName: "Colagem do Excel",
+          shipments: normalization.shipments,
+          calculations: freightResult.shipments,
+          activeDatasets,
+        });
+      }
     } catch (error) {
       setCalculationError(
         error instanceof Error
@@ -316,8 +338,9 @@ export default function NewSimulation() {
             id="shipment-paste-help"
             className="simulation-help"
           >
-            Os dados desta tela serão descartados ao sair ou atualizar
-            a página.
+            Após calcular, clique em “Salvar análise” para guardar os
+            resultados. Dados ainda não salvos serão descartados ao
+            sair ou atualizar a página.
           </p>
 
           <div className="simulation-actions">
@@ -451,7 +474,7 @@ export default function NewSimulation() {
 
           {calculationError && (
             <section className="simulation-errors" role="alert">
-              <h2>Não foi possível calcular o frete</h2>
+              <h2>Não foi possível concluir a operação</h2>
               <p>{calculationError}</p>
             </section>
           )}
@@ -604,7 +627,10 @@ export default function NewSimulation() {
                   />
 
                   {visibleShipments.length === 0 ? (
-                    <div className="freight-empty-results" role="status">
+                    <div
+                      className="freight-empty-results"
+                      role="status"
+                    >
                       <strong>
                         {filter === "opportunities" && !search.trim()
                           ? "Nenhuma oportunidade de economia encontrada."
@@ -657,25 +683,32 @@ export default function NewSimulation() {
                                   </td>
 
                                   <td>{shipment.shipmentType}</td>
+
                                   <td>
                                     {formatMoney(shipment.invoiceValue)}
                                   </td>
+
                                   <td>
                                     {numberFormatter.format(
                                       shipment.realWeightKg,
                                     )}{" "}
                                     kg
                                   </td>
+
                                   <td>{shipment.currentCarrier}</td>
+
                                   <td>
                                     {formatMoney(shipment.currentCost)}
                                   </td>
+
                                   <td>
                                     {shipment.bestCarrier ?? "Sem opção"}
                                   </td>
+
                                   <td>
                                     {formatMoney(shipment.bestCost)}
                                   </td>
+
                                   <td
                                     className={
                                       shipment.potentialSavings > 0
@@ -687,12 +720,15 @@ export default function NewSimulation() {
                                       shipment.potentialSavings,
                                     )}
                                   </td>
+
                                   <td>
                                     {formatPercent(
                                       shipment.potentialSavingsPercent,
                                     )}
                                   </td>
+
                                   <td>{shipment.status}</td>
+
                                   <td>
                                     <button
                                       type="button"
@@ -793,6 +829,13 @@ export default function NewSimulation() {
             </>
           )}
 
+          {simulationToSave && (
+            <SimulationDecisions
+              key={simulationToSave.requestId}
+              input={simulationToSave}
+            />
+          )}
+
           <details className="panel freight-input-panel">
             <summary className="freight-input-summary">
               <span>Consultar itens das remessas</span>
@@ -842,6 +885,7 @@ export default function NewSimulation() {
                               <td>{item.sourceRow}</td>
                               <td>{item.creationDate}</td>
                               <td>{item.material}</td>
+
                               <td>
                                 {
                                   item.original.values[
@@ -849,14 +893,17 @@ export default function NewSimulation() {
                                   ]
                                 }
                               </td>
+
                               <td>
                                 {item.quantity.toLocaleString("pt-BR")}
                               </td>
+
                               <td>
                                 {currencyFormatter.format(
                                   item.invoiceValue,
                                 )}
                               </td>
+
                               <td>
                                 {[
                                   item.original.values.Cidade,
@@ -865,6 +912,7 @@ export default function NewSimulation() {
                                   .filter(Boolean)
                                   .join(" / ")}
                               </td>
+
                               <td>
                                 {item.original.values.Transportadora}
                               </td>

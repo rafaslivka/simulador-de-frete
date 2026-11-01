@@ -30,6 +30,10 @@ const pages = [
 
 type PageId = (typeof pages)[number]["id"];
 
+type AppProps = {
+  role: "admin" | "employee";
+};
+
 const indicators = [
   {
     label: "Remessas analisadas",
@@ -49,11 +53,17 @@ const indicators = [
   },
 ];
 
-export default function App() {
+export default function App({ role }: AppProps) {
   const [activePage, setActivePage] = useState<PageId>("dashboard");
 
+  const visiblePages = pages.filter(
+    (page) => page.id !== "tables" || role === "admin",
+  );
+
   const currentPage =
-    pages.find((page) => page.id === activePage) ?? pages[0];
+    visiblePages.find((page) => page.id === activePage) ?? pages[0];
+
+  const isDashboard = currentPage.id === "dashboard";
 
   return (
     <div className="app-layout">
@@ -72,14 +82,18 @@ export default function App() {
         <p className="nav-label">ÁREA DE TRABALHO</p>
 
         <nav className="navigation" aria-label="Menu principal">
-          {pages.map((page) => (
+          {visiblePages.map((page) => (
             <button
               key={page.id}
               type="button"
               className={
-                activePage === page.id ? "nav-item active" : "nav-item"
+                currentPage.id === page.id
+                  ? "nav-item active"
+                  : "nav-item"
               }
-              aria-current={activePage === page.id ? "page" : undefined}
+              aria-current={
+                currentPage.id === page.id ? "page" : undefined
+              }
               onClick={() => setActivePage(page.id)}
             >
               {page.label}
@@ -109,7 +123,7 @@ export default function App() {
               </p>
             </div>
 
-            {activePage === "dashboard" && (
+            {isDashboard && (
               <button
                 type="button"
                 className="primary-button"
@@ -121,18 +135,21 @@ export default function App() {
           </div>
 
           <div className="development-notice">
-            Prévia de navegação. Os dados e a autenticação ainda não
-            estão conectados.
+            Sistema em desenvolvimento. As simulações, as tarifas e os
+            indicadores ainda não estão disponíveis para uso operacional.
           </div>
 
-          {activePage === "dashboard" ? (
+          {isDashboard ? (
             <>
               <section
                 className="indicator-grid"
                 aria-label="Indicadores de frete"
               >
                 {indicators.map((indicator) => (
-                  <article className="indicator-card" key={indicator.label}>
+                  <article
+                    className="indicator-card"
+                    key={indicator.label}
+                  >
                     <h2>{indicator.label}</h2>
                     <strong className="indicator-value">—</strong>
                     <p>{indicator.detail}</p>
@@ -150,7 +167,9 @@ export default function App() {
                   <div className="empty-symbol" aria-hidden="true">
                     ≡
                   </div>
+
                   <h3>Seus resultados aparecerão aqui</h3>
+
                   <p>
                     Após a integração, você poderá acompanhar os custos,
                     as recomendações e a economia confirmada.
@@ -161,6 +180,7 @@ export default function App() {
               <section className="explanation-grid">
                 <article className="explanation-card">
                   <h2>Economia potencial</h2>
+
                   <p>
                     Diferença entre o custo original e a melhor opção
                     elegível encontrada pelo simulador.
@@ -169,6 +189,7 @@ export default function App() {
 
                 <article className="explanation-card">
                   <h2>Economia realizada</h2>
+
                   <p>
                     Considera somente as recomendações cuja aplicação
                     foi confirmada pela operação.
@@ -180,9 +201,11 @@ export default function App() {
             <section className="panel">
               <div className="empty-state">
                 <h2>{currentPage.label}</h2>
+
                 <p>
                   Esta área será implementada nas próximas etapas.
                 </p>
+
                 <button
                   type="button"
                   className="secondary-button"

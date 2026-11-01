@@ -4,11 +4,20 @@ import {
   readShipments,
 } from "./utils/readShipments";
 import type { ShipmentReadResult } from "./utils/readShipments";
+import { normalizeShipments } from "./utils/normalizeShipments";
 import "./NewSimulation.css";
+
+const currencyFormatter = new Intl.NumberFormat("pt-BR", {
+  style: "currency",
+  currency: "BRL",
+});
 
 export default function NewSimulation() {
   const [text, setText] = useState("");
   const [result, setResult] = useState<ShipmentReadResult | null>(null);
+
+  const normalization =
+    result?.success ? normalizeShipments(result.items) : null;
 
   function handleTextChange(value: string) {
     setText(value);
@@ -24,6 +33,22 @@ export default function NewSimulation() {
     setResult(null);
   }
 
+  const totalInvoiceValue =
+    normalization?.success
+      ? normalization.shipments.reduce(
+          (total, shipment) => total + shipment.invoiceValue,
+          0,
+        )
+      : 0;
+
+  const totalQuantity =
+    normalization?.success
+      ? normalization.shipments.reduce(
+          (total, shipment) => total + shipment.quantity,
+          0,
+        )
+      : 0;
+
   return (
     <div className="simulation-page">
       <section className="panel">
@@ -36,6 +61,7 @@ export default function NewSimulation() {
           <p className="simulation-instructions">
             Copie as células do Excel incluindo a linha de cabeçalhos
             e cole abaixo. As colunas podem estar em outra ordem.
+            Cabeçalhos repetidos podem separar blocos de transportadoras.
           </p>
 
           <details className="simulation-columns">
@@ -57,7 +83,7 @@ export default function NewSimulation() {
             className="simulation-input"
             value={text}
             onChange={(event) => handleTextChange(event.target.value)}
-            placeholder="Cole o cabeçalho e as linhas copiadas do Excel..."
+            placeholder="Cole os cabeçalhos e as linhas copiadas do Excel..."
             spellCheck={false}
             aria-describedby="shipment-paste-help"
           />
@@ -94,13 +120,13 @@ export default function NewSimulation() {
           <h2>Revise os dados colados</h2>
 
           <p>
-            A conferência encontrou {result.errors.length} problema(s).
+            A leitura encontrou {result.errors.length} problema(s).
             Corrija os dados e confira novamente.
           </p>
 
           <ul>
-            {result.errors.slice(0, 30).map((error) => (
-              <li key={error}>{error}</li>
+            {result.errors.slice(0, 30).map((error, index) => (
+              <li key={`${index}-${error}`}>{error}</li>
             ))}
           </ul>
 
@@ -113,122 +139,194 @@ export default function NewSimulation() {
         </section>
       )}
 
-      {result?.success && (
-        <>
-          <section
-            className="simulation-summary"
-            aria-label="Resumo da conferência"
-            role="status"
-          >
-            <article>
-              <span>Cabeçalhos identificados</span>
-              <strong>{REQUIRED_HEADERS.length}</strong>
-            </article>
+      {result?.success &&
+        normalization &&
+        !normalization.success && (
+          <section className="simulation-errors" role="alert">
+            <h2>Revise preços, quantidades e datas</h2>
 
-            <article>
-              <span>Linhas de itens</span>
-              <strong>{result.items.length}</strong>
-            </article>
+            <p>
+              A leitura dos cabeçalhos e das linhas passou, mas a
+              conferência dos valores encontrou{" "}
+              {normalization.errors.length} problema(s).
+            </p>
 
-            <article>
-              <span>Remessas distintas</span>
-              <strong>{result.shipments.length}</strong>
-            </article>
+            <ul>
+              {normalization.errors.slice(0, 30).map((error, index) => (
+                <li key={`${index}-${error}`}>{error}</li>
+              ))}
+            </ul>
+
+            {normalization.errors.length > 30 && (
+              <p>
+                Mostrando os primeiros 30 problemas.
+              </p>
+            )}
           </section>
+        )}
 
-          <div className="simulation-success">
-            Estrutura conferida e itens agrupados por remessa.
-            Valores, datas e regras de frete ainda não foram validados.
-          </div>
+      {result?.success &&
+        normalization?.success && (
+          <>
+            <section
+              className="simulation-summary"
+              aria-label="Resumo da conferência"
+              role="status"
+            >
+              <article>
+                <span>Remessas distintas</span>
+                <strong>{normalization.shipments.length}</strong>
+              </article>
 
-          <section className="panel">
-            <div className="panel-heading">
-              <h2>Prévia das remessas</h2>
-              <span>Sem cálculo de frete</span>
-            </div>
+              <article>
+                <span>Linhas de itens</span>
+                <strong>{normalization.items.length}</strong>
+              </article>
 
-            <div className="simulation-body">
-              <p className="simulation-instructions">
-                Abra uma remessa para conferir os itens. A quantidade
-                de linhas não representa a soma de unidades ou volumes.
+              <article>
+                <span>Valor total das remessas</span>
+                <strong>{currencyFormatter.format(totalInvoiceValue)}</strong>
+              </article>
+            </section>
+
+            <div className="simulation-success">
+              <p>
+                Dados lidos e normalizados. Quantidade total considerada:
+                {" "}
+                {totalQuantity.toLocaleString("pt-BR")}.
               </p>
 
-              {result.shipments.length > 50 && (
-                <p className="simulation-help">
-                  Prévia limitada às primeiras 50 remessas.
-                  O resumo acima considera todas as remessas lidas.
-                </p>
+              <p>
+                O valor total soma o campo “Preço Crédito” de cada linha,
+                sem multiplicá-lo novamente pela quantidade. Ainda não há
+                cálculo de frete.
+              </p>
+
+              {normalization.warnings.length > 0 && (
+                <>
+                  <p>
+                    Avisos encontrados:
+                  </p>
+
+                  <ul>
+                    {normalization.warnings.slice(0, 20).map((warning, index) => (
+                      <li key={`${index}-${warning}`}>{warning}</li>
+                    ))}
+                  </ul>
+
+                  {normalization.warnings.length > 20 && (
+                    <p>
+                      Mostrando os primeiros 20 avisos.
+                    </p>
+                  )}
+                </>
               )}
-
-              <div className="shipment-list">
-                {result.shipments.slice(0, 50).map((group) => (
-                  <details
-                    className="shipment-detail"
-                    key={group.shipment}
-                  >
-                    <summary>
-                      <span>Remessa {group.shipment}</span>
-                      <span className="shipment-count">
-                        {group.items.length} linha(s)
-                      </span>
-                    </summary>
-
-                    <div className="shipment-table-wrap">
-                      <table className="shipment-table">
-                        <caption>
-                          Itens da remessa {group.shipment}
-                        </caption>
-
-                        <thead>
-                          <tr>
-                            <th scope="col">Linha</th>
-                            <th scope="col">Material</th>
-                            <th scope="col">Descrição</th>
-                            <th scope="col">Quantidade</th>
-                            <th scope="col">Preço Crédito</th>
-                            <th scope="col">Cidade / UF</th>
-                            <th scope="col">Transportadora</th>
-                          </tr>
-                        </thead>
-
-                        <tbody>
-                          {group.items.slice(0, 20).map((item) => (
-                            <tr key={item.sourceRow}>
-                              <td>{item.sourceRow}</td>
-                              <td>{item.values.Material}</td>
-                              <td>
-                                {item.values["Denominação de item"]}
-                              </td>
-                              <td>{item.values["Qtd.remessa"]}</td>
-                              <td>{item.values["Preço Crédito"]}</td>
-                              <td>
-                                {[
-                                  item.values.Cidade,
-                                  item.values.Região,
-                                ]
-                                  .filter(Boolean)
-                                  .join(" / ")}
-                              </td>
-                              <td>{item.values.Transportadora}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-
-                    {group.items.length > 20 && (
-                      <p className="shipment-preview-note">
-                        Mostrando os primeiros 20 itens desta remessa.
-                        Todos os itens foram mantidos na leitura.
-                      </p>
-                    )}
-                  </details>
-                ))}
-              </div>
             </div>
-          </section>
-        </>
-      )}
+
+            <section className="panel">
+              <div className="panel-heading">
+                <h2>Prévia das remessas</h2>
+                <span>Sem cálculo de frete</span>
+              </div>
+
+              <div className="simulation-body">
+                <p className="simulation-instructions">
+                  Abra uma remessa para conferir os itens. A quantidade
+                  de linhas não representa a soma de unidades ou volumes.
+                </p>
+
+                {normalization.shipments.length > 50 && (
+                  <p className="simulation-help">
+                    Prévia limitada às primeiras 50 remessas.
+                    O resumo acima considera todas as remessas lidas.
+                  </p>
+                )}
+
+                <div className="shipment-list">
+                  {normalization.shipments
+                    .slice(0, 50)
+                    .map((group) => (
+                      <details
+                        className="shipment-detail"
+                        key={group.shipment}
+                      >
+                        <summary>
+                          <span>Remessa {group.shipment}</span>
+                          <span className="shipment-count">
+                            {group.items.length} linha(s)
+                            {" · "}
+                            {currencyFormatter.format(group.invoiceValue)}
+                          </span>
+                        </summary>
+
+                        <div className="shipment-table-wrap">
+                          <table className="shipment-table">
+                            <caption>
+                              Itens da remessa {group.shipment}
+                            </caption>
+
+                            <thead>
+                              <tr>
+                                <th scope="col">Linha</th>
+                                <th scope="col">Data de criação</th>
+                                <th scope="col">Material</th>
+                                <th scope="col">Descrição</th>
+                                <th scope="col">Quantidade</th>
+                                <th scope="col">Preço Crédito</th>
+                                <th scope="col">Cidade / UF</th>
+                                <th scope="col">Transportadora</th>
+                              </tr>
+                            </thead>
+
+                            <tbody>
+                              {group.items.slice(0, 20).map((item) => (
+                                <tr key={item.sourceRow}>
+                                  <td>{item.sourceRow}</td>
+                                  <td>{item.creationDate}</td>
+                                  <td>{item.material}</td>
+                                  <td>
+                                    {item.original.values[
+                                      "Denominação de item"
+                                    ]}
+                                  </td>
+                                  <td>
+                                    {item.quantity.toLocaleString("pt-BR")}
+                                  </td>
+                                  <td>
+                                    {currencyFormatter.format(
+                                      item.invoiceValue,
+                                    )}
+                                  </td>
+                                  <td>
+                                    {[
+                                      item.original.values.Cidade,
+                                      item.original.values.Região,
+                                    ]
+                                      .filter(Boolean)
+                                      .join(" / ")}
+                                  </td>
+                                  <td>
+                                    {item.original.values.Transportadora}
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+
+                        {group.items.length > 20 && (
+                          <p className="shipment-preview-note">
+                            Mostrando os primeiros 20 itens desta remessa.
+                            Todos os itens foram mantidos na conferência.
+                          </p>
+                        )}
+                      </details>
+                    ))}
+                </div>
+              </div>
+            </section>
+          </>
+        )}
     </div>
   );
 }

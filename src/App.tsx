@@ -9,7 +9,8 @@ const pages = [
   {
     id: "dashboard",
     label: "Dashboard",
-    description: "Acompanhe os custos e a economia das mudanças confirmadas.",
+    description:
+      "Acompanhe os custos e a economia das mudanças confirmadas.",
   },
   {
     id: "simulation",
@@ -120,7 +121,7 @@ export default function App({ role }: AppProps) {
         </nav>
 
         <div className="sidebar-footer">
-          <strong>Buiatte Armazéns</strong>
+          <strong>Simulador de Frete</strong>
           <span>CD Extrema · Gestão de fretes</span>
         </div>
       </aside>

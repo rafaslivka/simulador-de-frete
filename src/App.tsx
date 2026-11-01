@@ -1,6 +1,7 @@
 import { useState } from "react";
 import NewSimulation from "./NewSimulation";
 import FreightTables from "./FreightTables";
+import FreightHistory from "./FreightHistory";
 
 const pages = [
   {
@@ -16,12 +17,12 @@ const pages = [
   {
     id: "validations",
     label: "Validações",
-    description: "Confirme quais recomendações foram aplicadas.",
+    description: "Confirme quais mudanças foram realizadas.",
   },
   {
     id: "history",
     label: "Histórico",
-    description: "Consulte as análises e os resultados anteriores.",
+    description: "Consulte as análises, cotações e decisões salvas.",
   },
   {
     id: "tables",
@@ -78,15 +79,11 @@ function DashboardOverview() {
         </div>
 
         <div className="empty-state">
-          <div className="empty-symbol" aria-hidden="true">
-            ≡
-          </div>
-
-          <h3>Seus resultados aparecerão aqui</h3>
-
+          <h3>Indicadores ainda não conectados</h3>
           <p>
-            Após a integração, você poderá acompanhar os custos,
-            as recomendações e a economia confirmada.
+            As análises salvas já podem ser consultadas no Histórico.
+            Os indicadores desta página ainda não consultam esses
+            registros.
           </p>
         </div>
       </section>
@@ -94,19 +91,17 @@ function DashboardOverview() {
       <section className="explanation-grid">
         <article className="explanation-card">
           <h2>Economia potencial</h2>
-
           <p>
-            Diferença entre o custo original e a melhor opção
-            elegível encontrada pelo simulador.
+            Diferença entre o frete calculado na transportadora atual
+            e a melhor opção elegível encontrada na simulação.
           </p>
         </article>
 
         <article className="explanation-card">
           <h2>Economia realizada</h2>
-
           <p>
-            Considera somente as recomendações cuja aplicação
-            foi confirmada pela operação.
+            Considera somente as mudanças que você confirmou ter
+            realizado.
           </p>
         </article>
       </section>
@@ -125,35 +120,52 @@ export default function App({ role }: AppProps) {
     visiblePages.find((page) => page.id === activePage) ?? pages[0];
 
   function renderPage() {
-    if (currentPage.id === "dashboard") {
-      return <DashboardOverview />;
+    switch (currentPage.id) {
+      case "dashboard":
+        return <DashboardOverview />;
+
+      case "simulation":
+        return <NewSimulation />;
+
+      case "history":
+        return <FreightHistory />;
+
+      case "tables":
+        return role === "admin" ? <FreightTables /> : null;
+
+      case "validations":
+        return (
+          <section className="panel">
+            <div className="empty-state">
+              <h2>Decisões por remessa</h2>
+
+              <p>
+                Nesta etapa, registre suas decisões na tela de
+                simulação, após salvar a análise. As decisões
+                registradas podem ser consultadas no Histórico.
+              </p>
+
+              <div className="simulation-actions">
+                <button
+                  type="button"
+                  className="primary-button"
+                  onClick={() => setActivePage("simulation")}
+                >
+                  Nova simulação
+                </button>
+
+                <button
+                  type="button"
+                  className="secondary-button"
+                  onClick={() => setActivePage("history")}
+                >
+                  Consultar histórico
+                </button>
+              </div>
+            </div>
+          </section>
+        );
     }
-
-    if (currentPage.id === "simulation") {
-      return <NewSimulation />;
-    }
-
-    if (currentPage.id === "tables" && role === "admin") {
-      return <FreightTables />;
-    }
-
-    return (
-      <section className="panel">
-        <div className="empty-state">
-          <h2>{currentPage.label}</h2>
-
-          <p>Esta área será implementada nas próximas etapas.</p>
-
-          <button
-            type="button"
-            className="secondary-button"
-            onClick={() => setActivePage("dashboard")}
-          >
-            Voltar ao dashboard
-          </button>
-        </div>
-      </section>
-    );
   }
 
   return (
@@ -161,7 +173,21 @@ export default function App({ role }: AppProps) {
       <aside className="sidebar">
         <div className="brand">
           <span className="brand-symbol" aria-hidden="true">
-            F
+            <svg
+              width="26"
+              height="26"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M4 18h5l4-6h7" />
+              <path d="m16 8 4 4-4 4" />
+              <path d="M4 6h5" />
+              <path d="M4 10h3" />
+            </svg>
           </span>
 
           <div>
@@ -193,22 +219,24 @@ export default function App({ role }: AppProps) {
         </nav>
 
         <div className="sidebar-footer">
-          <strong>Simulador de Frete</strong>
-          <span>Versão em desenvolvimento</span>
+          <strong>Buiatte Armazéns</strong>
+          <span>CD Extrema · Gestão de fretes</span>
         </div>
       </aside>
 
       <div className="workspace">
         <header className="topbar">
           <span>Gestão de transportes</span>
-          <span className="preview-badge">Prévia da interface</span>
+          <span>CD Extrema</span>
         </header>
 
         <main className="main-content">
           <div className="page-heading">
             <div>
               <p className="eyebrow">SIMULADOR DE FRETE</p>
+
               <h1>{currentPage.label}</h1>
+
               <p className="page-description">
                 {currentPage.description}
               </p>
@@ -223,11 +251,6 @@ export default function App({ role }: AppProps) {
                 Nova simulação
               </button>
             )}
-          </div>
-
-          <div className="development-notice">
-            Sistema em desenvolvimento. Os cálculos de frete e a
-            gravação do histórico ainda não estão disponíveis.
           </div>
 
           {renderPage()}

@@ -3,12 +3,13 @@ import NewSimulation from "./NewSimulation";
 import FreightTables from "./FreightTables";
 import FreightHistory from "./FreightHistory";
 import FreightValidations from "./FreightValidations";
+import FreightDashboard from "./FreightDashboard";
 
 const pages = [
   {
     id: "dashboard",
     label: "Dashboard",
-    description: "Acompanhe os resultados das análises de frete.",
+    description: "Acompanhe os custos e a economia das mudanças confirmadas.",
   },
   {
     id: "simulation",
@@ -38,84 +39,6 @@ type AppProps = {
   role: "admin" | "employee";
 };
 
-const indicators = [
-  {
-    label: "Remessas analisadas",
-    detail: "Quantidade de remessas no período",
-  },
-  {
-    label: "Custo original",
-    detail: "Frete calculado na transportadora atual",
-  },
-  {
-    label: "Economia potencial",
-    detail: "Economia identificada nas simulações",
-  },
-  {
-    label: "Economia realizada",
-    detail: "Economia com aplicação confirmada",
-  },
-];
-
-function DashboardOverview() {
-  return (
-    <>
-      <section
-        className="indicator-grid"
-        aria-label="Indicadores de frete"
-      >
-        {indicators.map((indicator) => (
-          <article
-            className="indicator-card"
-            key={indicator.label}
-          >
-            <h2>{indicator.label}</h2>
-            <strong className="indicator-value">—</strong>
-            <p>{indicator.detail}</p>
-          </article>
-        ))}
-      </section>
-
-      <section className="panel">
-        <div className="panel-heading">
-          <h2>Resultados das simulações</h2>
-          <span>Visão geral</span>
-        </div>
-
-        <div className="empty-state">
-          <h3>Indicadores ainda não conectados</h3>
-
-          <p>
-            As análises salvas já podem ser consultadas no Histórico.
-            Os indicadores desta página ainda não consultam esses
-            registros.
-          </p>
-        </div>
-      </section>
-
-      <section className="explanation-grid">
-        <article className="explanation-card">
-          <h2>Economia potencial</h2>
-
-          <p>
-            Diferença entre o frete calculado na transportadora atual
-            e a melhor opção elegível encontrada na simulação.
-          </p>
-        </article>
-
-        <article className="explanation-card">
-          <h2>Economia realizada</h2>
-
-          <p>
-            Considera somente as mudanças que você confirmou ter
-            realizado.
-          </p>
-        </article>
-      </section>
-    </>
-  );
-}
-
 export default function App({ role }: AppProps) {
   const [activePage, setActivePage] =
     useState<PageId>("dashboard");
@@ -130,7 +53,7 @@ export default function App({ role }: AppProps) {
   function renderPage() {
     switch (currentPage.id) {
       case "dashboard":
-        return <DashboardOverview />;
+        return <FreightDashboard />;
 
       case "simulation":
         return <NewSimulation />;

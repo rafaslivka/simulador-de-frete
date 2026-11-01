@@ -39,6 +39,11 @@ export type ShipmentReadResult =
       errors: string[];
     };
 
+type HeaderMapping = {
+  indexes: Map<ShipmentHeader, number>;
+  columnCount: number;
+};
+
 function normalizeHeader(value: string): string {
   return value
     .replace(/^\uFEFF/, "")
@@ -48,8 +53,87 @@ function normalizeHeader(value: string): string {
     .replace(/[^a-z0-9]/g, "");
 }
 
+const NORMALIZED_HEADERS = new Set(
+  REQUIRED_HEADERS.map(normalizeHeader),
+);
+
 /**
- * Lê dados separados por tabulação, como os copiados do Excel.
+ * Reconhece cabeçalhos entre os blocos de transportadoras.
+ * A primeira linha não vazia sempre é tratada como cabeçalho.
+ */
+function isHeaderRow(cells: string[]): boolean {
+  const normalizedCells = cells.map(normalizeHeader);
+
+  const recognizedHeaders = new Set(
+    normalizedCells.filter((value) => NORMALIZED_HEADERS.has(value)),
+  );
+
+  return (
+    recognizedHeaders.size >= 3 ||
+    (
+      recognizedHeaders.has("remessa") &&
+      recognizedHeaders.has("material")
+    )
+  );
+}
+
+/**
+ * Valida os cabeçalhos e registra a posição das colunas
+ * para o bloco de dados seguinte.
+ */
+function readHeader(
+  cells: string[],
+  sourceRow: number,
+): {
+  mapping: HeaderMapping | null;
+  errors: string[];
+} {
+  const normalizedCells = cells.map(normalizeHeader);
+  const indexes = new Map<ShipmentHeader, number>();
+  const errors: string[] = [];
+
+  for (const header of REQUIRED_HEADERS) {
+    const expectedHeader = normalizeHeader(header);
+
+    const matches = normalizedCells
+      .map((value, index) => ({ value, index }))
+      .filter((entry) => entry.value === expectedHeader);
+
+    if (matches.length === 0) {
+      errors.push(
+        `Cabeçalho da linha ${sourceRow}: coluna obrigatória não encontrada: ${header}.`,
+      );
+      continue;
+    }
+
+    if (matches.length > 1) {
+      errors.push(
+        `Cabeçalho da linha ${sourceRow}: a coluna "${header}" está repetida no mesmo cabeçalho.`,
+      );
+      continue;
+    }
+
+    indexes.set(header, matches[0].index);
+  }
+
+  if (errors.length > 0) {
+    return {
+      mapping: null,
+      errors,
+    };
+  }
+
+  return {
+    mapping: {
+      indexes,
+      columnCount: cells.length,
+    },
+    errors: [],
+  };
+}
+
+/**
+ * Lê células separadas por tabulação, como na cópia do Excel.
  * Preserva tabulações e quebras de linha dentro de células entre aspas.
  */
 function parseClipboard(text: string): string[][] {
@@ -163,93 +247,65 @@ export function readShipments(text: string): ShipmentReadResult {
     }))
     .filter((row) => row.cells.some((cell) => cell !== ""));
 
-  const headerRow = nonEmptyRows[0];
-
-  if (!headerRow) {
+  if (nonEmptyRows.length === 0) {
     return {
       success: false,
       errors: ["Nenhum conteúdo foi encontrado na área de colagem."],
     };
   }
 
-  const normalizedHeaders = headerRow.cells.map(normalizeHeader);
-  const columnIndexes = new Map<ShipmentHeader, number>();
   const errors: string[] = [];
-
-  for (const header of REQUIRED_HEADERS) {
-    const expectedHeader = normalizeHeader(header);
-
-    const matches = normalizedHeaders
-      .map((value, index) => ({ value, index }))
-      .filter((entry) => entry.value === expectedHeader);
-
-    if (matches.length === 0) {
-      errors.push(`Coluna obrigatória não encontrada: ${header}.`);
-      continue;
-    }
-
-    if (matches.length > 1) {
-      errors.push(`O cabeçalho "${header}" está repetido.`);
-      continue;
-    }
-
-    columnIndexes.set(header, matches[0].index);
-  }
-
-  if (errors.length > 0) {
-    return {
-      success: false,
-      errors,
-    };
-  }
-
-  const dataRows = nonEmptyRows.slice(1);
-
-  if (dataRows.length === 0) {
-    return {
-      success: false,
-      errors: [
-        "Os cabeçalhos foram encontrados, mas não há linhas de dados.",
-      ],
-    };
-  }
-
   const items: ShipmentItem[] = [];
 
-  for (const row of dataRows) {
+  let currentMapping: HeaderMapping | null = null;
+  let foundDataRow = false;
+
+  for (const [index, row] of nonEmptyRows.entries()) {
+    const isHeader = index === 0 || isHeaderRow(row.cells);
+
+    if (isHeader) {
+      const headerResult = readHeader(row.cells, row.sourceRow);
+
+      currentMapping = headerResult.mapping;
+      errors.push(...headerResult.errors);
+
+      // Cabeçalhos delimitam blocos, mas não contam como itens.
+      continue;
+    }
+
+    foundDataRow = true;
+
+    // Mantém uma referência constante para uso dentro do map.
+    const mapping = currentMapping;
+
+    // Blocos com cabeçalho inválido não usam o mapa anterior.
+    if (mapping === null) {
+      continue;
+    }
+
     const hasUnexpectedColumns = row.cells
-      .slice(headerRow.cells.length)
+      .slice(mapping.columnCount)
       .some((cell) => cell !== "");
 
     if (hasUnexpectedColumns) {
       errors.push(
-        `Linha ${row.sourceRow}: há dados além das colunas do cabeçalho.`,
+        `Linha ${row.sourceRow}: há dados além das colunas do cabeçalho deste bloco.`,
       );
       continue;
     }
 
     const values = Object.fromEntries(
       REQUIRED_HEADERS.map((header) => {
-        const columnIndex = columnIndexes.get(header);
+        const columnIndex = mapping.indexes.get(header);
 
         const value =
-          columnIndex === undefined ? "" : (row.cells[columnIndex] ?? "");
+          columnIndex === undefined
+            ? ""
+            : (row.cells[columnIndex] ?? "");
 
         return [header, value];
       }),
     ) as Record<ShipmentHeader, string>;
-
-    const isRepeatedHeader = REQUIRED_HEADERS.every(
-      (header) =>
-        normalizeHeader(values[header]) === normalizeHeader(header),
-    );
-
-    if (isRepeatedHeader) {
-      errors.push(
-        `Linha ${row.sourceRow}: existe outro cabeçalho no meio dos dados. Mantenha somente o cabeçalho inicial.`,
-      );
-      continue;
-    }
 
     const requiredItemFields: ShipmentHeader[] = [
       "Remessa",
@@ -278,6 +334,15 @@ export function readShipments(text: string): ShipmentReadResult {
     return {
       success: false,
       errors,
+    };
+  }
+
+  if (!foundDataRow || items.length === 0) {
+    return {
+      success: false,
+      errors: [
+        "Os cabeçalhos foram encontrados, mas não há linhas de dados.",
+      ],
     };
   }
 

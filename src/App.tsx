@@ -2,6 +2,7 @@ import { useState } from "react";
 import NewSimulation from "./NewSimulation";
 import FreightTables from "./FreightTables";
 import FreightHistory from "./FreightHistory";
+import FreightValidations from "./FreightValidations";
 
 const pages = [
   {
@@ -17,7 +18,7 @@ const pages = [
   {
     id: "validations",
     label: "Validações",
-    description: "Confirme quais mudanças foram realizadas.",
+    description: "Registre e consulte suas decisões por remessa.",
   },
   {
     id: "history",
@@ -64,7 +65,10 @@ function DashboardOverview() {
         aria-label="Indicadores de frete"
       >
         {indicators.map((indicator) => (
-          <article className="indicator-card" key={indicator.label}>
+          <article
+            className="indicator-card"
+            key={indicator.label}
+          >
             <h2>{indicator.label}</h2>
             <strong className="indicator-value">—</strong>
             <p>{indicator.detail}</p>
@@ -80,6 +84,7 @@ function DashboardOverview() {
 
         <div className="empty-state">
           <h3>Indicadores ainda não conectados</h3>
+
           <p>
             As análises salvas já podem ser consultadas no Histórico.
             Os indicadores desta página ainda não consultam esses
@@ -91,6 +96,7 @@ function DashboardOverview() {
       <section className="explanation-grid">
         <article className="explanation-card">
           <h2>Economia potencial</h2>
+
           <p>
             Diferença entre o frete calculado na transportadora atual
             e a melhor opção elegível encontrada na simulação.
@@ -99,6 +105,7 @@ function DashboardOverview() {
 
         <article className="explanation-card">
           <h2>Economia realizada</h2>
+
           <p>
             Considera somente as mudanças que você confirmou ter
             realizado.
@@ -110,7 +117,8 @@ function DashboardOverview() {
 }
 
 export default function App({ role }: AppProps) {
-  const [activePage, setActivePage] = useState<PageId>("dashboard");
+  const [activePage, setActivePage] =
+    useState<PageId>("dashboard");
 
   const visiblePages = pages.filter(
     (page) => page.id !== "tables" || role === "admin",
@@ -127,44 +135,14 @@ export default function App({ role }: AppProps) {
       case "simulation":
         return <NewSimulation />;
 
+      case "validations":
+        return <FreightValidations />;
+
       case "history":
         return <FreightHistory />;
 
       case "tables":
         return role === "admin" ? <FreightTables /> : null;
-
-      case "validations":
-        return (
-          <section className="panel">
-            <div className="empty-state">
-              <h2>Decisões por remessa</h2>
-
-              <p>
-                Nesta etapa, registre suas decisões na tela de
-                simulação, após salvar a análise. As decisões
-                registradas podem ser consultadas no Histórico.
-              </p>
-
-              <div className="simulation-actions">
-                <button
-                  type="button"
-                  className="primary-button"
-                  onClick={() => setActivePage("simulation")}
-                >
-                  Nova simulação
-                </button>
-
-                <button
-                  type="button"
-                  className="secondary-button"
-                  onClick={() => setActivePage("history")}
-                >
-                  Consultar histórico
-                </button>
-              </div>
-            </div>
-          </section>
-        );
     }
   }
 

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import NewSimulation from "./NewSimulation";
+import FreightTables from "./FreightTables";
 
 const pages = [
   {
@@ -132,14 +133,16 @@ export default function App({ role }: AppProps) {
       return <NewSimulation />;
     }
 
+    if (currentPage.id === "tables" && role === "admin") {
+      return <FreightTables />;
+    }
+
     return (
       <section className="panel">
         <div className="empty-state">
           <h2>{currentPage.label}</h2>
 
-          <p>
-            Esta área será implementada nas próximas etapas.
-          </p>
+          <p>Esta área será implementada nas próximas etapas.</p>
 
           <button
             type="button"

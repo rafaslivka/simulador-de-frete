@@ -665,3 +665,81 @@
     transition: none;
   }
 }
+/* Cabeçalho e menu lateral integrados */
+.freight-authenticated {
+  --freight-header-height: 76px;
+  --freight-navigation-background: #10233f;
+}
+
+.freight-authenticated .freight-account-header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-sizing: border-box;
+  height: var(--freight-header-height);
+  min-height: var(--freight-header-height);
+  background: var(--freight-navigation-background);
+  border-bottom: 0;
+}
+
+.freight-authenticated .app-layout {
+  align-items: start;
+  min-height: calc(100vh - var(--freight-header-height));
+  min-height: calc(100dvh - var(--freight-header-height));
+}
+
+.freight-authenticated .sidebar {
+  position: sticky;
+  top: var(--freight-header-height);
+  align-self: start;
+  box-sizing: border-box;
+
+  height: calc(100vh - var(--freight-header-height));
+  height: calc(100dvh - var(--freight-header-height));
+  min-height: 0;
+
+  display: flex;
+  flex-direction: column;
+
+  overflow-y: auto;
+  overflow-x: hidden;
+
+  background: var(--freight-navigation-background);
+  scrollbar-width: thin;
+  scrollbar-color: #3a567b var(--freight-navigation-background);
+}
+
+/* A marca fica somente no cabeçalho */
+.freight-authenticated .sidebar .brand {
+  display: none;
+}
+
+.freight-authenticated .sidebar-footer {
+  margin-top: auto;
+}
+
+/* Layout para celular */
+@media (max-width: 760px) {
+  .freight-authenticated .freight-account-header {
+    height: auto;
+    min-height: var(--freight-header-height);
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .freight-authenticated .freight-account-company {
+    display: flex;
+  }
+
+  .freight-authenticated .app-layout {
+    min-height: 0;
+  }
+
+  .freight-authenticated .sidebar {
+    position: static;
+    top: auto;
+    height: auto;
+    min-height: 0;
+    overflow: visible;
+  }
+}

@@ -1,0 +1,491 @@
+/* Paleta do aplicativo */
+
+:root {
+  --freight-page: #f4f6fa;
+  --freight-surface: #ffffff;
+  --freight-surface-soft: #f1f5fa;
+  --freight-surface-hover: #eaf1fc;
+  --freight-text: #182b45;
+  --freight-muted: #627189;
+  --freight-border: #d7e0ed;
+  --freight-accent: #285ca8;
+  --freight-focus: #70aaff;
+}
+
+:root[data-theme="dark"] {
+  --freight-page: #0b1422;
+  --freight-surface: #132136;
+  --freight-surface-soft: #1a2b43;
+  --freight-surface-hover: #243c59;
+  --freight-text: #e5edf8;
+  --freight-muted: #acbdd3;
+  --freight-border: #344a65;
+  --freight-accent: #9dc5ff;
+  --freight-focus: #8bbaff;
+
+  background: var(--freight-page);
+  color: var(--freight-text);
+}
+
+.freight-theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  flex-shrink: 0;
+  min-height: 37px;
+  padding: 9px 13px;
+  border: 1px solid var(--freight-border);
+  border-radius: 9px;
+  background: var(--freight-surface);
+  color: var(--freight-text);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.freight-theme-toggle svg {
+  flex-shrink: 0;
+}
+
+.freight-theme-toggle:hover {
+  background: var(--freight-surface-hover);
+}
+
+.freight-theme-toggle:focus-visible {
+  outline: 3px solid var(--freight-focus);
+  outline-offset: 3px;
+}
+
+/* Combina com o cabeçalho azul nos dois temas */
+
+.freight-account-header .freight-theme-toggle {
+  border-color: #3a567b;
+  background: #1b3555;
+  color: #e2edff;
+}
+
+.freight-account-header .freight-theme-toggle:hover {
+  border-color: #6487b6;
+  background: #29496f;
+  color: #ffffff;
+}
+
+.freight-login-theme-row {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 24px;
+}
+
+/* Fundo e estrutura */
+
+html[data-theme="dark"] body,
+html[data-theme="dark"] #root,
+html[data-theme="dark"] .freight-authenticated,
+html[data-theme="dark"] .app-layout,
+html[data-theme="dark"] .workspace {
+  background: var(--freight-page);
+  color: var(--freight-text);
+}
+
+html[data-theme="dark"] .freight-authenticated {
+  --freight-navigation-background: #0d1b2e;
+}
+
+html[data-theme="dark"] .sidebar,
+html[data-theme="dark"] .freight-account-header {
+  background: #0d1b2e;
+}
+
+html[data-theme="dark"] .topbar {
+  border-color: var(--freight-border);
+  background: var(--freight-surface);
+  color: var(--freight-muted);
+}
+
+html[data-theme="dark"] .sidebar-footer {
+  border-color: var(--freight-border);
+}
+
+html[data-theme="dark"] .nav-item:hover {
+  background: #243c59;
+}
+
+html[data-theme="dark"] .nav-item.active {
+  background: #2563df;
+  color: #ffffff;
+}
+
+html[data-theme="dark"] .page-heading h1,
+html[data-theme="dark"] .panel-heading h2,
+html[data-theme="dark"] .indicator-value,
+html[data-theme="dark"] .empty-state h2,
+html[data-theme="dark"] .empty-state h3,
+html[data-theme="dark"] .explanation-card h2 {
+  color: var(--freight-text);
+}
+
+html[data-theme="dark"] .eyebrow,
+html[data-theme="dark"] .page-description,
+html[data-theme="dark"] .panel-heading > span,
+html[data-theme="dark"] .indicator-card h2,
+html[data-theme="dark"] .indicator-card p,
+html[data-theme="dark"] .empty-state p,
+html[data-theme="dark"] .explanation-card p {
+  color: var(--freight-muted);
+}
+
+/* Painéis e indicadores compartilhados */
+
+html[data-theme="dark"] .panel,
+html[data-theme="dark"] .indicator-card,
+html[data-theme="dark"] .freight-tables-card,
+html[data-theme="dark"] .simulation-summary article,
+html[data-theme="dark"] .freight-auth-status-card {
+  border-color: var(--freight-border);
+  background: var(--freight-surface);
+  color: var(--freight-text);
+}
+
+html[data-theme="dark"] .panel-heading,
+html[data-theme="dark"] .freight-tables-card-heading,
+html[data-theme="dark"] .freight-tables-save-row,
+html[data-theme="dark"] .freight-tables-version-content {
+  border-color: var(--freight-border);
+}
+
+html[data-theme="dark"] .explanation-card {
+  border-left-color: #4e77aa;
+}
+
+html[data-theme="dark"] .empty-symbol,
+html[data-theme="dark"] .preview-badge,
+html[data-theme="dark"] .freight-tables-admin-badge,
+html[data-theme="dark"] .freight-tables-dataset-tags span {
+  border-color: var(--freight-border);
+  background: var(--freight-surface-soft);
+  color: var(--freight-accent);
+}
+
+html[data-theme="dark"] .development-notice {
+  border-color: var(--freight-border);
+  background: var(--freight-surface-soft);
+  color: var(--freight-muted);
+}
+
+/* Botões secundários e campos */
+
+html[data-theme="dark"] .secondary-button {
+  border-color: var(--freight-border);
+  background: var(--freight-surface);
+  color: var(--freight-accent);
+}
+
+html[data-theme="dark"] .secondary-button:hover:not(:disabled) {
+  background: var(--freight-surface-hover);
+}
+
+html[data-theme="dark"] .freight-authenticated input:not(
+  [type="checkbox"],
+  [type="radio"],
+  [type="range"],
+  [type="color"],
+  [type="button"],
+  [type="submit"]
+),
+html[data-theme="dark"] .freight-authenticated select,
+html[data-theme="dark"] .freight-authenticated textarea {
+  border-color: var(--freight-border);
+  background: #0f1c2f;
+  color: var(--freight-text);
+  color-scheme: dark;
+}
+
+html[data-theme="dark"] .freight-authenticated input::placeholder,
+html[data-theme="dark"] .freight-authenticated textarea::placeholder {
+  color: #91a6c1;
+  opacity: 1;
+}
+
+html[data-theme="dark"] .freight-authenticated input:focus-visible,
+html[data-theme="dark"] .freight-authenticated select:focus-visible,
+html[data-theme="dark"] .freight-authenticated textarea:focus-visible {
+  outline: 2px solid var(--freight-focus);
+  outline-offset: 2px;
+}
+
+html[data-theme="dark"] input::file-selector-button {
+  margin-right: 12px;
+  padding: 7px 11px;
+  border: 1px solid var(--freight-border);
+  border-radius: 6px;
+  background: var(--freight-surface-soft);
+  color: var(--freight-text);
+}
+
+/* Tabelas */
+
+html[data-theme="dark"] .main-content table {
+  color: var(--freight-text);
+}
+
+html[data-theme="dark"] .main-content table th {
+  border-color: var(--freight-border);
+  background: var(--freight-surface-soft);
+  color: #d6e5f8;
+}
+
+html[data-theme="dark"] .main-content table td {
+  border-color: var(--freight-border);
+  background-color: var(--freight-surface);
+  color: var(--freight-text);
+}
+
+html[data-theme="dark"] .main-content table tbody tr:hover > td {
+  background-color: var(--freight-surface-soft);
+}
+
+html[data-theme="dark"] .main-content table caption {
+  color: var(--freight-muted);
+}
+
+html[data-theme="dark"] .freight-tables-preview tr:first-child td {
+  background: var(--freight-surface-soft);
+  color: #d6e5f8;
+}
+
+/* Simulação */
+
+html[data-theme="dark"] .simulation-instructions,
+html[data-theme="dark"] .simulation-help,
+html[data-theme="dark"] .simulation-summary span,
+html[data-theme="dark"] .shipment-count,
+html[data-theme="dark"] .results-search,
+html[data-theme="dark"] .results-note,
+html[data-theme="dark"] .show-all-toggle,
+html[data-theme="dark"] .applied-checkbox {
+  color: var(--freight-muted);
+}
+
+html[data-theme="dark"] .simulation-summary strong,
+html[data-theme="dark"] .simulation-label,
+html[data-theme="dark"] .quote-list > h3 {
+  color: var(--freight-text);
+}
+
+html[data-theme="dark"] .simulation-columns,
+html[data-theme="dark"] .shipment-detail,
+html[data-theme="dark"] .freight-tables-version,
+html[data-theme="dark"] .freight-tables-preview-wrap {
+  border-color: var(--freight-border);
+  background: var(--freight-surface);
+  color: var(--freight-text);
+}
+
+html[data-theme="dark"] .shipment-detail > summary,
+html[data-theme="dark"] .shipment-preview-note,
+html[data-theme="dark"] .freight-tables-version > summary,
+html[data-theme="dark"] .freight-tables-file-result,
+html[data-theme="dark"] .validation-action-bar {
+  border-color: var(--freight-border);
+  background: var(--freight-surface-soft);
+  color: var(--freight-text);
+}
+
+html[data-theme="dark"] .simulation-columns summary,
+html[data-theme="dark"] .freight-tables-text-button {
+  color: var(--freight-accent);
+}
+
+html[data-theme="dark"] .simulation-columns ol,
+html[data-theme="dark"] .validation-action-bar span,
+html[data-theme="dark"] .validation-action-bar small {
+  color: var(--freight-muted);
+}
+
+html[data-theme="dark"] .validation-action-bar strong {
+  color: var(--freight-text);
+}
+
+/* Administração das tabelas */
+
+html[data-theme="dark"] .freight-tables-card-heading h2,
+html[data-theme="dark"] .freight-tables-file-label,
+html[data-theme="dark"] .freight-tables-file-result-heading strong,
+html[data-theme="dark"] .freight-tables-preview-heading,
+html[data-theme="dark"] .freight-tables-version-name,
+html[data-theme="dark"] .freight-tables-version-content dd,
+html[data-theme="dark"] .freight-tables-version-content h3 {
+  color: var(--freight-text);
+}
+
+html[data-theme="dark"] .freight-tables-card-heading p,
+html[data-theme="dark"] .freight-tables-help,
+html[data-theme="dark"] .freight-tables-file-result-heading span,
+html[data-theme="dark"] .freight-tables-preview-heading span,
+html[data-theme="dark"] .freight-tables-save-row p,
+html[data-theme="dark"] .freight-tables-version-missing,
+html[data-theme="dark"] .freight-tables-version-content dt,
+html[data-theme="dark"] .freight-tables-version-content > p,
+html[data-theme="dark"] .freight-tables-history time {
+  color: var(--freight-muted);
+}
+
+html[data-theme="dark"] .freight-tables-history li {
+  border-color: var(--freight-border);
+  color: var(--freight-text);
+}
+
+html[data-theme="dark"] .freight-tables-info {
+  border-color: var(--freight-border);
+  background: var(--freight-surface-soft);
+  color: var(--freight-muted);
+}
+
+/* Avisos mantêm cores diferentes por significado */
+
+html[data-theme="dark"] .simulation-success,
+html[data-theme="dark"] .freight-tables-success {
+  border-color: #2a6955;
+  background: #102f29;
+  color: #a6e8c9;
+}
+
+html[data-theme="dark"] .simulation-warning,
+html[data-theme="dark"] .freight-tables-warning,
+html[data-theme="dark"] .save-required-note {
+  border-color: #796133;
+  background: #352b18;
+  color: #f3d595;
+}
+
+html[data-theme="dark"] .simulation-errors,
+html[data-theme="dark"] .freight-tables-error,
+html[data-theme="dark"] .freight-auth-error {
+  border-color: #854653;
+  background: #381f2a;
+  color: #ffc0ca;
+}
+
+html[data-theme="dark"] .freight-tables-version-status {
+  color: #91e3bc;
+}
+
+html[data-theme="dark"] .saving-positive {
+  color: #91e3bc !important;
+}
+
+/* Login */
+
+html[data-theme="dark"] .freight-login-page {
+  background:
+    radial-gradient(
+      ellipse at 12% 15%,
+      rgb(45 99 181 / 20%),
+      transparent 45%
+    ),
+    radial-gradient(
+      ellipse at 92% 88%,
+      rgb(45 99 181 / 12%),
+      transparent 40%
+    ),
+    var(--freight-page);
+}
+
+html[data-theme="dark"] .freight-login-shell {
+  border-color: var(--freight-border);
+  background: var(--freight-surface);
+  box-shadow: 0 32px 80px rgb(0 0 0 / 30%);
+}
+
+html[data-theme="dark"] .freight-login-form-panel {
+  background: linear-gradient(150deg, #132136 65%, #182a43);
+}
+
+html[data-theme="dark"] .freight-login-form-content h1,
+html[data-theme="dark"] .freight-login-field label,
+html[data-theme="dark"] .freight-auth-status-card h1 {
+  color: var(--freight-text);
+}
+
+html[data-theme="dark"] .freight-login-access-label,
+html[data-theme="dark"] .freight-login-password button {
+  color: var(--freight-accent);
+}
+
+html[data-theme="dark"] .freight-login-description,
+html[data-theme="dark"] .freight-login-support,
+html[data-theme="dark"] .freight-login-form-footer,
+html[data-theme="dark"] .freight-auth-loading {
+  color: var(--freight-muted);
+}
+
+html[data-theme="dark"] .freight-login-form-footer {
+  border-color: var(--freight-border);
+}
+
+html[data-theme="dark"] .freight-login-field input {
+  border-color: var(--freight-border);
+  background: #0f1c2f;
+  color: var(--freight-text);
+}
+
+html[data-theme="dark"] .freight-login-field input::placeholder {
+  color: #91a6c1;
+}
+
+html[data-theme="dark"] .freight-login-field input:focus {
+  border-color: var(--freight-focus);
+  background: #0f1c2f;
+  box-shadow: 0 0 0 4px rgb(139 186 255 / 12%);
+}
+
+html[data-theme="dark"] .freight-login-password button:hover {
+  background: var(--freight-surface-hover);
+}
+
+html[data-theme="dark"] .freight-auth-spinner {
+  border-color: var(--freight-border);
+  border-top-color: var(--freight-focus);
+}
+
+/* Navegação por teclado e barras de rolagem */
+
+html[data-theme="dark"] button:focus-visible {
+  outline-color: var(--freight-focus);
+}
+
+html[data-theme="dark"] .main-content * {
+  scrollbar-color: #526b8b var(--freight-surface);
+}
+
+@media (max-width: 1000px) {
+  .freight-account-actions {
+    gap: 12px;
+  }
+}
+
+@media (max-width: 760px) {
+  .freight-account-actions {
+    flex-wrap: wrap;
+  }
+
+  .freight-account-person {
+    flex: 1 1 140px;
+  }
+
+  .freight-account-header .freight-theme-toggle {
+    padding: 9px;
+  }
+
+  .freight-account-header .freight-theme-toggle > span {
+    display: none;
+  }
+}
+
+@media (forced-colors: active) {
+  .freight-theme-toggle {
+    border: 1px solid ButtonText;
+  }
+}

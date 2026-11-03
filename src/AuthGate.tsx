@@ -3,6 +3,7 @@ import type { FormEvent, ReactNode } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { supabase } from "./lib/supabase";
 import "./AuthGate.css";
+import { ThemeProvider, ThemeToggle } from "./Theme";
 
 type Profile = {
   id: string;
@@ -38,6 +39,7 @@ function FreightMark() {
 function getInitials(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean);
   const first = parts[0]?.charAt(0) ?? "";
+
   const last =
     parts.length > 1
       ? parts[parts.length - 1]?.charAt(0) ?? ""
@@ -160,6 +162,10 @@ function Login() {
           className="freight-login-form-panel"
           aria-labelledby="login-title"
         >
+          <div className="freight-login-theme-row">
+            <ThemeToggle />
+          </div>
+
           <div className="freight-login-form-content">
             <span className="freight-login-access-label">
               ACESSO À PLATAFORMA
@@ -178,6 +184,7 @@ function Login() {
             >
               <div className="freight-login-field">
                 <label htmlFor="login-email">E-mail</label>
+
                 <input
                   id="login-email"
                   name="email"
@@ -376,6 +383,8 @@ function ProfileAccess({
             </div>
           </div>
 
+          <ThemeToggle />
+
           <button
             type="button"
             className="freight-account-signout"
@@ -448,7 +457,7 @@ function ProfileAccess({
   );
 }
 
-export default function AuthGate({ children }: AuthGateProps) {
+function AuthContent({ children }: AuthGateProps) {
   const [session, setSession] = useState<Session | null>(null);
   const [ready, setReady] = useState(false);
 
@@ -482,5 +491,13 @@ export default function AuthGate({ children }: AuthGateProps) {
     <ProfileAccess key={session.user.id} session={session}>
       {children}
     </ProfileAccess>
+  );
+}
+
+export default function AuthGate({ children }: AuthGateProps) {
+  return (
+    <ThemeProvider>
+      <AuthContent>{children}</AuthContent>
+    </ThemeProvider>
   );
 }

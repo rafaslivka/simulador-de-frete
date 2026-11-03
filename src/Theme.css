@@ -489,3 +489,207 @@ html[data-theme="dark"] .main-content * {
     border: 1px solid ButtonText;
   }
 }
+
+/* =========================================================
+   Tema escuro — Histórico, Validações e decisões
+   ========================================================= */
+
+/* Cartões principais */
+
+html[data-theme="dark"] .history-shipment,
+html[data-theme="dark"] .validation-card,
+html[data-theme="dark"] .decision-item {
+  border-color: var(--freight-border);
+  background: var(--freight-surface);
+  color: var(--freight-text);
+}
+
+/* Cabeçalhos dos cartões */
+
+html[data-theme="dark"] .history-shipment-toggle,
+html[data-theme="dark"] .validation-card-toggle,
+html[data-theme="dark"] .decision-item > summary {
+  background: var(--freight-surface-soft);
+  color: var(--freight-text);
+}
+
+html[data-theme="dark"] .history-shipment-toggle:hover,
+html[data-theme="dark"] .validation-card-toggle:hover,
+html[data-theme="dark"] .decision-item > summary:hover {
+  background: var(--freight-surface-hover);
+}
+
+/* Textos auxiliares, filtros e paginação */
+
+html[data-theme="dark"] .history-help,
+html[data-theme="dark"] .history-toolbar label,
+html[data-theme="dark"] .history-pagination,
+html[data-theme="dark"] .history-shipment-toggle span,
+html[data-theme="dark"] .history-costs span,
+html[data-theme="dark"] .history-audit li > span,
+html[data-theme="dark"] .validation-help,
+html[data-theme="dark"] .validation-filters label,
+html[data-theme="dark"] .validation-fields label,
+html[data-theme="dark"] .validation-pagination,
+html[data-theme="dark"] .validation-costs span,
+html[data-theme="dark"] .validation-audit li > span,
+html[data-theme="dark"] .validation-empty p,
+html[data-theme="dark"] .decision-toolbar label,
+html[data-theme="dark"] .decision-fields label,
+html[data-theme="dark"] .decision-costs span,
+html[data-theme="dark"] .decision-item-actions > span,
+html[data-theme="dark"] .decision-empty p {
+  color: var(--freight-muted);
+}
+
+/* Títulos, valores e detalhes */
+
+html[data-theme="dark"] .history-costs strong,
+html[data-theme="dark"] .history-shipment-details h3,
+html[data-theme="dark"] .history-audit summary,
+html[data-theme="dark"] .validation-costs strong,
+html[data-theme="dark"] .validation-quotes summary,
+html[data-theme="dark"] .decision-costs strong {
+  color: var(--freight-text);
+}
+
+/* Áreas internas e estados vazios */
+
+html[data-theme="dark"] .history-empty,
+html[data-theme="dark"] .history-versions,
+html[data-theme="dark"] .history-decision,
+html[data-theme="dark"] .validation-costs > div,
+html[data-theme="dark"] .validation-audit,
+html[data-theme="dark"] .validation-empty,
+html[data-theme="dark"] .decision-costs > div,
+html[data-theme="dark"] .decision-empty {
+  border-color: var(--freight-border);
+  background: var(--freight-surface-soft);
+  color: var(--freight-text);
+}
+
+/* Bordas de tabelas, editores e histórico de alterações */
+
+html[data-theme="dark"] .history-table-scroll,
+html[data-theme="dark"] .history-audit li,
+html[data-theme="dark"] .validation-editor,
+html[data-theme="dark"] .validation-table-scroll,
+html[data-theme="dark"] .validation-audit li,
+html[data-theme="dark"] .decision-item-body {
+  border-color: var(--freight-border);
+}
+
+/* Campos de preenchimento */
+
+html[data-theme="dark"] .history-toolbar input[type="date"],
+html[data-theme="dark"] .history-toolbar input[type="search"],
+html[data-theme="dark"] .validation-filters input,
+html[data-theme="dark"] .validation-filters select,
+html[data-theme="dark"] .validation-fields select,
+html[data-theme="dark"] .validation-fields textarea,
+html[data-theme="dark"] .decision-toolbar input,
+html[data-theme="dark"] .decision-fields select,
+html[data-theme="dark"] .decision-fields textarea {
+  border-color: var(--freight-border);
+  background: #0f1c2f;
+  color: var(--freight-text);
+  color-scheme: dark;
+}
+
+html[data-theme="dark"] .history-toolbar input:focus,
+html[data-theme="dark"] .validation-filters input:focus,
+html[data-theme="dark"] .validation-filters select:focus,
+html[data-theme="dark"] .validation-fields select:focus,
+html[data-theme="dark"] .validation-fields textarea:focus,
+html[data-theme="dark"] .decision-toolbar input:focus,
+html[data-theme="dark"] .decision-fields select:focus,
+html[data-theme="dark"] .decision-fields textarea:focus {
+  border-color: var(--freight-focus);
+  outline: 2px solid var(--freight-focus);
+  outline-offset: 2px;
+}
+
+html[data-theme="dark"] .history-checkbox input {
+  accent-color: #6098ff;
+  color-scheme: dark;
+}
+
+/* Tabelas */
+
+html[data-theme="dark"] .main-content .history-table th,
+html[data-theme="dark"] .main-content .validation-table-scroll th {
+  border-color: var(--freight-border);
+  background: var(--freight-surface-soft);
+  color: var(--freight-text);
+}
+
+html[data-theme="dark"] .main-content .history-table td,
+html[data-theme="dark"] .main-content .validation-table-scroll td {
+  border-color: var(--freight-border);
+  background: var(--freight-surface);
+  color: var(--freight-text);
+}
+
+html[data-theme="dark"] .main-content .history-table tbody tr:hover > td,
+html[data-theme="dark"] .main-content .validation-table-scroll tbody tr:hover > td {
+  background: var(--freight-surface-hover);
+}
+
+/* Valores de economia */
+
+html[data-theme="dark"] .validation-costs .validation-saving,
+html[data-theme="dark"] .decision-saving,
+html[data-theme="dark"] .decision-costs strong.decision-saving {
+  color: #91e3bc;
+}
+
+/* Estado: pendente */
+
+html[data-theme="dark"] .validation-badge.pending,
+html[data-theme="dark"] .decision-status.pending {
+  background: #352b18;
+  color: #f3d595;
+}
+
+/* Estado: mudança realizada */
+
+html[data-theme="dark"] .validation-badge.applied,
+html[data-theme="dark"] .decision-status.applied {
+  background: #102f29;
+  color: #a6e8c9;
+}
+
+/* Estado: mudança não realizada */
+
+html[data-theme="dark"] .validation-badge.not_applied,
+html[data-theme="dark"] .decision-status.not_applied {
+  background: #29384d;
+  color: #c9d5e6;
+}
+
+/* Mensagens de sucesso */
+
+html[data-theme="dark"] .validation-success,
+html[data-theme="dark"] .decision-success {
+  border-color: #2a6955;
+  background: #102f29;
+  color: #a6e8c9;
+}
+
+/* Aviso de decisão já existente */
+
+html[data-theme="dark"] .decision-existing-note {
+  border-color: #796133;
+  background: #352b18;
+  color: #f3d595;
+}
+
+/* Mensagens de erro */
+
+html[data-theme="dark"] .history-error,
+html[data-theme="dark"] .validation-error,
+html[data-theme="dark"] .decision-error {
+  border-color: #854653;
+  background: #381f2a;
+  color: #ffc0ca;
+}

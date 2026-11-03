@@ -157,17 +157,28 @@ function parseNumber(value: unknown): number | null {
 }
 
 function parsePercent(value: unknown, fallback: number): number {
-  const parsed = parseNumber(value);
+  const containsPercent =
+    typeof value === "string" && value.includes("%");
+
+  const valueToParse =
+    typeof value === "string"
+      ? value.trim().replace(/%\s*$/, "").trim()
+      : value;
+
+  const parsed = parseNumber(valueToParse);
 
   if (parsed === null) {
     return fallback;
   }
 
-  const containsPercent = String(value ?? "").includes("%");
   const percent =
-    containsPercent || parsed > 1 ? parsed / 100 : parsed;
+    containsPercent || parsed > 1
+      ? parsed / 100
+      : parsed;
 
-  return percent >= 0 && percent <= 1 ? percent : fallback;
+  return percent >= 0 && percent <= 1
+    ? percent
+    : fallback;
 }
 
 function roundMoney(value: number): number {

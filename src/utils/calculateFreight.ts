@@ -7,7 +7,7 @@ import type {
 
 const AUXILIARY_SHEET_MARKER = "__FREIGHT_WORKBOOK_SHEET__";
 const CUBAGE_FACTOR_DEFAULT = 300;
-const RTE_ISSUANCE_FEE = 25;
+const RTE_ISSUANCE_FEE = 26.5;
 const ANEG_GRIS_DEFAULT = 0.0015;
 const ANEG_ADV_DEFAULT = 0.0003;
 
@@ -22,7 +22,12 @@ export const FREIGHT_CARRIERS = [
 ] as const;
 
 export type FreightCarrier = (typeof FREIGHT_CARRIERS)[number];
-export type ShipmentType = "PRODUTO" | "PECAS" | "MISTO" | "NÃO IDENTIFICADO";
+
+export type ShipmentType =
+  | "PRODUTO"
+  | "PECAS"
+  | "MISTO"
+  | "NÃO IDENTIFICADO";
 
 export type FreightCarrierQuote = {
   carrier: FreightCarrier;
@@ -42,7 +47,10 @@ export type CalculatedFreightShipment = {
   cubicVolumeM3: number;
   missingWeightItems: number;
   missingCubageItems: number;
-  currentCarrier: FreightCarrier | "MÚLTIPLAS" | "NÃO IDENTIFICADA";
+  currentCarrier:
+    | FreightCarrier
+    | "MÚLTIPLAS"
+    | "NÃO IDENTIFICADA";
   currentCost: number | null;
   bestCarrier: FreightCarrier | null;
   bestCost: number | null;
@@ -109,7 +117,10 @@ function normalizeMaterialWithoutLeadingZeros(value: unknown): string {
   return normalizeMaterial(value).replace(/^0+(?=\d)/, "");
 }
 
-function cellText(row: SpreadsheetCell[], columnIndex: number): string {
+function cellText(
+  row: SpreadsheetCell[],
+  columnIndex: number,
+): string {
   return String(row[columnIndex] ?? "").trim();
 }
 
@@ -153,7 +164,8 @@ function parsePercent(value: unknown, fallback: number): number {
   }
 
   const containsPercent = String(value ?? "").includes("%");
-  const percent = containsPercent || parsed > 1 ? parsed / 100 : parsed;
+  const percent =
+    containsPercent || parsed > 1 ? parsed / 100 : parsed;
 
   return percent >= 0 && percent <= 1 ? percent : fallback;
 }
@@ -164,14 +176,21 @@ function roundMoney(value: number): number {
   }
 
   const sign = value < 0 ? -1 : 1;
-  return sign * Math.round((Math.abs(value) + Number.EPSILON) * 100) / 100;
+
+  return (
+    sign *
+    Math.round((Math.abs(value) + Number.EPSILON) * 100) /
+    100
+  );
 }
 
 function ceilHundreds(weightKg: number): number {
   return Math.max(1, Math.ceil(weightKg / 100));
 }
 
-function getMainRows(rows: SpreadsheetCell[][]): SpreadsheetCell[][] {
+function getMainRows(
+  rows: SpreadsheetCell[][],
+): SpreadsheetCell[][] {
   const markerIndex = rows.findIndex(
     (row) => row[0] === AUXILIARY_SHEET_MARKER,
   );
@@ -179,7 +198,9 @@ function getMainRows(rows: SpreadsheetCell[][]): SpreadsheetCell[][] {
   return markerIndex >= 0 ? rows.slice(0, markerIndex) : rows;
 }
 
-function buildDatasetMap(datasets: FreightDatasetVersion[]): DatasetMap {
+function buildDatasetMap(
+  datasets: FreightDatasetVersion[],
+): DatasetMap {
   const map: DatasetMap = new Map();
 
   for (const dataset of datasets) {
@@ -197,7 +218,10 @@ function findHeaderIndex(
 ): number {
   return rows.findIndex((row) => {
     const cells = row.map(normalizeText);
-    return requiredHeaders.every((header) => cells.includes(header));
+
+    return requiredHeaders.every((header) =>
+      cells.includes(header),
+    );
   });
 }
 
@@ -207,11 +231,16 @@ function findColumn(
 ): number {
   return row.findIndex((cell) => {
     const normalized = normalizeText(cell);
-    return searchTerms.some((term) => normalized.includes(term));
+
+    return searchTerms.some((term) =>
+      normalized.includes(term),
+    );
   });
 }
 
-function findRouteTable(rows: SpreadsheetCell[][]): RouteTable | null {
+function findRouteTable(
+  rows: SpreadsheetCell[][],
+): RouteTable | null {
   const headerIndex = findHeaderIndex(rows, ["UF", "DESTINO"]);
 
   if (headerIndex < 0) {
@@ -262,7 +291,9 @@ function findRoute(
       currentUf = rowUf;
     }
 
-    const rowDestination = normalizeText(row[table.destinationColumn]);
+    const rowDestination = normalizeText(
+      row[table.destinationColumn],
+    );
 
     if (
       currentUf === targetUf &&
@@ -279,7 +310,11 @@ function findWeightBand(
   bandRow: SpreadsheetCell[],
   chargedWeight: number,
 ): WeightBand | null {
-  for (let columnIndex = 0; columnIndex < bandRow.length; columnIndex += 1) {
+  for (
+    let columnIndex = 0;
+    columnIndex < bandRow.length;
+    columnIndex += 1
+  ) {
     const label = String(bandRow[columnIndex] ?? "");
     const normalizedLabel = normalizeText(label);
 
@@ -288,6 +323,7 @@ function findWeightBand(
     }
 
     const numbers = label.match(/\d+(?:[.,]\d+)?/g) ?? [];
+
     const values = numbers
       .map((number) => parseNumber(number))
       .filter((number): number is number => number !== null);
@@ -312,7 +348,10 @@ function findWeightBand(
     if (normalizedLabel.includes("ATE")) {
       const upperLimit = values[values.length - 1];
 
-      if (upperLimit !== undefined && chargedWeight <= upperLimit) {
+      if (
+        upperLimit !== undefined &&
+        chargedWeight <= upperLimit
+      ) {
         return {
           columnIndex,
           isPerKgRate: false,
@@ -340,7 +379,10 @@ function findWeightBand(
     } else {
       const upperLimit = values[0];
 
-      if (upperLimit !== undefined && chargedWeight <= upperLimit) {
+      if (
+        upperLimit !== undefined &&
+        chargedWeight <= upperLimit
+      ) {
         return {
           columnIndex,
           isPerKgRate: false,
@@ -350,6 +392,51 @@ function findWeightBand(
   }
 
   return null;
+}
+
+// Usado apenas para explicar por que não existe faixa aplicável.
+// Não altera o peso nem aplica automaticamente a primeira tarifa.
+function findLowestWeightBandLimit(
+  bandRow: SpreadsheetCell[],
+): number | null {
+  let lowestLimit: number | null = null;
+
+  for (const cell of bandRow) {
+    const label = String(cell ?? "");
+    const normalizedLabel = normalizeText(label);
+
+    if (!normalizedLabel.includes("KG")) {
+      continue;
+    }
+
+    if (normalizedLabel.includes("ACIMA")) {
+      continue;
+    }
+
+    const numbers = label.match(/\d+(?:[.,]\d+)?/g) ?? [];
+
+    const values = numbers
+      .map((number) => parseNumber(number))
+      .filter((number): number is number => number !== null);
+
+    if (values.length === 0) {
+      continue;
+    }
+
+    const lowerLimit =
+      normalizedLabel.includes("ATE") || values.length === 1
+        ? 0
+        : values[0];
+
+    if (
+      lowerLimit !== undefined &&
+      (lowestLimit === null || lowerLimit < lowestLimit)
+    ) {
+      lowestLimit = lowerLimit;
+    }
+  }
+
+  return lowestLimit;
 }
 
 function getParameterFromGeneralities(
@@ -390,18 +477,30 @@ function readFeeValue(
   row: SpreadsheetCell[],
   bandRow: SpreadsheetCell[],
   terms: string[],
-): { found: boolean; included: boolean; value: number } {
+): {
+  found: boolean;
+  included: boolean;
+  value: number;
+} {
   const columnIndex = findFeeColumn(bandRow, terms);
 
   if (columnIndex < 0) {
-    return { found: false, included: false, value: 0 };
+    return {
+      found: false,
+      included: false,
+      value: 0,
+    };
   }
 
   const rawValue = row[columnIndex];
   const normalized = normalizeText(rawValue);
 
   if (normalized.includes("INCLUSO")) {
-    return { found: true, included: true, value: 0 };
+    return {
+      found: true,
+      included: true,
+      value: 0,
+    };
   }
 
   return {
@@ -411,7 +510,10 @@ function readFeeValue(
   };
 }
 
-function getDestinationByOfficialCapital(city: string, uf: string): string {
+function getDestinationByOfficialCapital(
+  city: string,
+  uf: string,
+): string {
   const capitals: Record<string, string> = {
     AC: "RIO BRANCO",
     AL: "MACEIO",
@@ -460,10 +562,14 @@ function findCityDestination(
 
     return (
       cityColumnTerms.some((term) =>
-        normalized.some((cell) => cell.includes(normalizeText(term))),
+        normalized.some((cell) =>
+          cell.includes(normalizeText(term)),
+        ),
       ) &&
       ufColumnTerms.some((term) =>
-        normalized.some((cell) => cell.includes(normalizeText(term))),
+        normalized.some((cell) =>
+          cell.includes(normalizeText(term)),
+        ),
       )
     );
   });
@@ -473,21 +579,38 @@ function findCityDestination(
   }
 
   const header = rows[headerIndex];
-  const cityColumn = findColumn(header, cityColumnTerms.map(normalizeText));
-  const ufColumn = findColumn(header, ufColumnTerms.map(normalizeText));
+
+  const cityColumn = findColumn(
+    header,
+    cityColumnTerms.map(normalizeText),
+  );
+
+  const ufColumn = findColumn(
+    header,
+    ufColumnTerms.map(normalizeText),
+  );
+
   const destinationColumn = findColumn(
     header,
     destinationColumnTerms.map(normalizeText),
   );
 
-  if (cityColumn < 0 || ufColumn < 0 || destinationColumn < 0) {
+  if (
+    cityColumn < 0 ||
+    ufColumn < 0 ||
+    destinationColumn < 0
+  ) {
     return null;
   }
 
   const targetCity = normalizeText(city);
   const targetUf = uf.trim().toUpperCase();
 
-  for (let index = headerIndex + 1; index < rows.length; index += 1) {
+  for (
+    let index = headerIndex + 1;
+    index < rows.length;
+    index += 1
+  ) {
     const row = rows[index] ?? [];
 
     if (
@@ -515,6 +638,7 @@ function getVenkonDestination(
   uf: string,
 ): string {
   const rows = datasets.get("TABELA_VENKON_ABR") ?? [];
+
   const destination = findCityDestination(
     rows,
     city,
@@ -550,6 +674,7 @@ function getAnegDestination(
   uf: string,
 ): string {
   const rows = datasets.get("TABELA_ANEG_CIDADES") ?? [];
+
   const destination = findCityDestination(
     rows,
     city,
@@ -586,11 +711,19 @@ function buildMaterialMap(
   const weightColumn = findColumn(header, ["PESOUNITARIOKG"]);
   const cubageColumn = findColumn(header, ["CUBAGEMUNITARIA"]);
 
-  if (materialColumn < 0 || weightColumn < 0 || cubageColumn < 0) {
+  if (
+    materialColumn < 0 ||
+    weightColumn < 0 ||
+    cubageColumn < 0
+  ) {
     return map;
   }
 
-  for (let index = headerIndex + 1; index < rows.length; index += 1) {
+  for (
+    let index = headerIndex + 1;
+    index < rows.length;
+    index += 1
+  ) {
     const row = rows[index] ?? [];
     const material = normalizeMaterial(row[materialColumn]);
 
@@ -607,11 +740,15 @@ function buildMaterialMap(
   return map;
 }
 
-function getShipmentType(shipment: NormalizedShipment): ShipmentType {
+function getShipmentType(
+  shipment: NormalizedShipment,
+): ShipmentType {
   const types = new Set<string>();
 
   for (const item of shipment.items) {
-    const deposit = String(item.original.values["Depósito"] ?? "")
+    const deposit = String(
+      item.original.values["Depósito"] ?? "",
+    )
       .trim()
       .toUpperCase();
 
@@ -651,13 +788,22 @@ function getCommercialCategory(
   if (text.includes("FANCOIL")) return "FANCOIL";
   if (text.includes("PACKAGE")) return "PACKAGE";
   if (text.includes("PORTATIL")) return "PORTATEIS";
-  if (text.includes("REFRIGERADOR") || text.includes("LAVAESECA")) {
+
+  if (
+    text.includes("REFRIGERADOR") ||
+    text.includes("LAVAESECA")
+  ) {
     return "REFRIGERADORES";
   }
+
   if (text.includes("FRIGOBAR") || text.includes("SMALLRR")) {
     return "SMALL RR";
   }
-  if (text.includes("AQUECEDOR") || text.includes("HEATWATER")) {
+
+  if (
+    text.includes("AQUECEDOR") ||
+    text.includes("HEATWATER")
+  ) {
     return "HW";
   }
 
@@ -686,12 +832,20 @@ function getCarrierFromNameOrCode(
 
   const normalizedName = normalizeText(name);
 
-  if (normalizedName.includes("RODONAVES") || normalizedName.includes("RTE")) {
+  if (
+    normalizedName.includes("RODONAVES") ||
+    normalizedName.includes("RTE")
+  ) {
     return "Rodonaves";
   }
-  if (normalizedName.includes("VENKON") || normalizedName.includes("TMA")) {
+
+  if (
+    normalizedName.includes("VENKON") ||
+    normalizedName.includes("TMA")
+  ) {
     return "Venkon";
   }
+
   if (normalizedName.includes("FAVORITA")) return "Favorita";
   if (normalizedName.includes("RODOBRAS")) return "Rodobrás";
   if (normalizedName.includes("BRASILWEB")) return "Brasil Web";
@@ -722,13 +876,22 @@ function staticEligibilityFallback(
   if (shipmentType === "PRODUTO") {
     switch (carrier) {
       case "Venkon":
-        return ["AL", "BA", "CE", "MA", "PB", "PE", "PI", "RJ", "RN", "SE", "SP"].includes(uf);
+        return [
+          "AL", "BA", "CE", "MA", "PB", "PE",
+          "PI", "RJ", "RN", "SE", "SP",
+        ].includes(uf);
 
       case "Rodonaves":
-        return uf === "MG" || (uf === "SP" && destination === "Interior");
+        return (
+          uf === "MG" ||
+          (uf === "SP" && destination === "Interior")
+        );
 
       case "Brasil Web":
-        return ["ES", "MG"].includes(uf) || (uf === "SP" && destination === "Interior");
+        return (
+          ["ES", "MG"].includes(uf) ||
+          (uf === "SP" && destination === "Interior")
+        );
 
       case "Rodobrás":
         return ["PR", "RS", "SC"].includes(uf);
@@ -737,7 +900,10 @@ function staticEligibilityFallback(
         return ["PR", "RJ", "RS", "SP"].includes(uf);
 
       case "Favorita":
-        return ["AC", "AM", "AP", "DF", "GO", "MS", "MT", "PA", "RO", "RR", "TO"].includes(uf);
+        return [
+          "AC", "AM", "AP", "DF", "GO", "MS",
+          "MT", "PA", "RO", "RR", "TO",
+        ].includes(uf);
 
       case "Modular":
         return false;
@@ -745,7 +911,10 @@ function staticEligibilityFallback(
   }
 
   if (shipmentType === "PECAS") {
-    const heavy = isHeavyPartsShipment(realWeightKg, cubicVolumeM3);
+    const heavy = isHeavyPartsShipment(
+      realWeightKg,
+      cubicVolumeM3,
+    );
 
     if (!heavy) {
       return false;
@@ -753,13 +922,17 @@ function staticEligibilityFallback(
 
     if (carrier === "Rodonaves") {
       return [
-        "AC", "AM", "AP", "DF", "ES", "GO", "MG", "MS", "MT",
-        "PA", "PR", "RJ", "RO", "RR", "RS", "SC", "SP", "TO",
+        "AC", "AM", "AP", "DF", "ES", "GO",
+        "MG", "MS", "MT", "PA", "PR", "RJ",
+        "RO", "RR", "RS", "SC", "SP", "TO",
       ].includes(uf);
     }
 
     if (carrier === "Modular") {
-      return ["AL", "BA", "CE", "MA", "PB", "PE", "PI", "RN", "SE"].includes(uf);
+      return [
+        "AL", "BA", "CE", "MA", "PB",
+        "PE", "PI", "RN", "SE",
+      ].includes(uf);
     }
   }
 
@@ -775,7 +948,10 @@ function isEligibleByMatrix(
   realWeightKg: number,
   cubicVolumeM3: number,
 ): boolean {
-  if (shipmentType !== "PRODUTO" && shipmentType !== "PECAS") {
+  if (
+    shipmentType !== "PRODUTO" &&
+    shipmentType !== "PECAS"
+  ) {
     return false;
   }
 
@@ -787,7 +963,10 @@ function isEligibleByMatrix(
     return false;
   }
 
-  if (shipmentType === "PECAS" && !["Rodonaves", "Modular"].includes(carrier)) {
+  if (
+    shipmentType === "PECAS" &&
+    !["Rodonaves", "Modular"].includes(carrier)
+  ) {
     return false;
   }
 
@@ -811,7 +990,11 @@ function isEligibleByMatrix(
 
   const headerIndex = rows.findIndex((row) => {
     const cells = row.map(normalizeText);
-    return cells.includes("UF") && cells.includes("ZONADETARIFA");
+
+    return (
+      cells.includes("UF") &&
+      cells.includes("ZONADETARIFA")
+    );
   });
 
   if (headerIndex < 0) {
@@ -828,9 +1011,15 @@ function isEligibleByMatrix(
   const header = rows[headerIndex];
   const ufColumn = findColumn(header, ["UF"]);
   const destinationColumn = findColumn(header, ["ZONADETARIFA"]);
-  const carrierColumn = findColumn(header, [normalizeText(carrier)]);
+  const carrierColumn = findColumn(header, [
+    normalizeText(carrier),
+  ]);
 
-  if (ufColumn < 0 || destinationColumn < 0 || carrierColumn < 0) {
+  if (
+    ufColumn < 0 ||
+    destinationColumn < 0 ||
+    carrierColumn < 0
+  ) {
     return staticEligibilityFallback(
       carrier,
       shipmentType,
@@ -844,12 +1033,18 @@ function isEligibleByMatrix(
   const targetUf = uf.trim().toUpperCase();
   const targetDestination = normalizeText(destination);
 
-  for (let index = headerIndex + 1; index < rows.length; index += 1) {
+  for (
+    let index = headerIndex + 1;
+    index < rows.length;
+    index += 1
+  ) {
     const row = rows[index] ?? [];
 
     if (
-      String(row[ufColumn] ?? "").trim().toUpperCase() === targetUf &&
-      normalizeText(row[destinationColumn]) === targetDestination
+      String(row[ufColumn] ?? "").trim().toUpperCase() ===
+        targetUf &&
+      normalizeText(row[destinationColumn]) ===
+        targetDestination
     ) {
       return normalizeText(row[carrierColumn]) === "X";
     }
@@ -897,43 +1092,66 @@ function quoteRte(
   const route = findRoute(table, uf, destination);
 
   if (!route) {
-    return { cost: null, reason: "Sem tarifa Rodonaves para a rota." };
-  }
-
-  const subHeader = rows[table.headerIndex + 1] ?? [];
-  const percentColumn = findPercentColumn(subHeader, shipmentType);
-  const minimumColumn = findColumn(
-    rows[table.headerIndex] ?? [],
-    ["FREITEMINIMO"],
-  );
-
-  if (percentColumn < 0 || minimumColumn < 0) {
     return {
       cost: null,
-      reason: "Coluna percentual ou frete mínimo não localizada.",
+      reason: "Sem tarifa Rodonaves para a rota.",
     };
   }
 
-  let percent = parsePercent(route.row[percentColumn], 0);
+  const subHeader = rows[table.headerIndex + 1] ?? [];
 
-  if (percent > 1) {
-    percent = 0;
+  const percentColumn = findPercentColumn(
+    subHeader,
+    shipmentType,
+  );
+
+  // "Frete mínimo" normalizado resulta em FRETEMINIMO.
+  const minimumColumn = findColumn(
+    rows[table.headerIndex] ?? [],
+    ["FRETEMINIMO"],
+  );
+
+  if (percentColumn < 0) {
+    return {
+      cost: null,
+      reason:
+        "Coluna percentual Rodonaves não localizada para o tipo da remessa.",
+    };
   }
 
+  if (minimumColumn < 0) {
+    return {
+      cost: null,
+      reason: "Coluna de frete mínimo Rodonaves não localizada.",
+    };
+  }
+
+  const percent = parsePercent(route.row[percentColumn], 0);
   const minimum = parseNumber(route.row[minimumColumn]) ?? 0;
 
   if (percent <= 0 && minimum <= 0) {
-    return { cost: null, reason: "Tarifa Rodonaves sem valor aplicável." };
+    return {
+      cost: null,
+      reason: "Tarifa Rodonaves sem valor aplicável.",
+    };
   }
 
   const base = Math.max(invoiceValue * percent, minimum);
-  const gris = getParameterFromGeneralities(rows, "GRIS", 0.0026, true);
+
+  const gris = getParameterFromGeneralities(
+    rows,
+    "GRIS",
+    0.0026,
+    true,
+  );
+
   const adValorem = getParameterFromGeneralities(
     rows,
     "SEGURO (ADV)",
     0.0015,
     true,
   );
+
   const toll = getParameterFromGeneralities(
     rows,
     "PEDAGIO FRACIONADO",
@@ -942,6 +1160,7 @@ function quoteRte(
   );
 
   const tollCost = ceilHundreds(realWeightKg) * toll;
+
   const cost =
     base +
     invoiceValue * gris +
@@ -951,7 +1170,8 @@ function quoteRte(
 
   return {
     cost: roundMoney(cost),
-    reason: "Base, GRIS, ADV, pedágio por peso real e taxa de emissão.",
+    reason:
+      "Base percentual ou frete mínimo, GRIS, ADV, pedágio por peso real e emissão de R$ 26,50.",
   };
 }
 
@@ -978,11 +1198,15 @@ function quoteWeightTable(
   const route = findRoute(table, uf, destination);
 
   if (!route) {
-    return { cost: null, reason: `Sem tarifa ${carrier} para a rota.` };
+    return {
+      cost: null,
+      reason: `Sem tarifa ${carrier} para a rota.`,
+    };
   }
 
   const bandRow = rows[table.headerIndex + 1] ?? [];
   const factorDefault = carrier === "Brasil Web" ? 250 : 300;
+
   let factor = getParameterFromGeneralities(
     rows,
     "FATOR DE CUBAGEM",
@@ -994,20 +1218,65 @@ function quoteWeightTable(
     factor = CUBAGE_FACTOR_DEFAULT;
   }
 
-  const chargedWeight = Math.max(realWeightKg, cubicVolumeM3 * factor);
+  const chargedWeight = Math.max(
+    realWeightKg,
+    cubicVolumeM3 * factor,
+  );
+
   const band = findWeightBand(bandRow, chargedWeight);
 
   if (!band) {
+    if (carrier === "Brasil Web") {
+      const lowestLimit = findLowestWeightBandLimit(bandRow);
+
+      const formattedWeight = chargedWeight.toLocaleString(
+        "pt-BR",
+        {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        },
+      );
+
+      if (
+        lowestLimit !== null &&
+        chargedWeight < lowestLimit
+      ) {
+        const formattedLimit =
+          lowestLimit.toLocaleString("pt-BR");
+
+        return {
+          cost: null,
+          reason:
+            `Peso tarifário de ${formattedWeight} kg abaixo da ` +
+            `primeira faixa da tabela (${formattedLimit} kg). ` +
+            "Tarifa não definida no arquivo para esse peso.",
+        };
+      }
+
+      return {
+        cost: null,
+        reason:
+          `A tabela Brasil Web não contém uma faixa que inclua ` +
+          `${formattedWeight} kg tarifários. Confira os limites ` +
+          "das faixas no arquivo.",
+      };
+    }
+
     return {
       cost: null,
-      reason: `Sem faixa ${carrier} para ${chargedWeight.toFixed(2)} kg tarifários.`,
+      reason:
+        `Sem faixa ${carrier} para ` +
+        `${chargedWeight.toFixed(2)} kg tarifários.`,
     };
   }
 
   let base = parseNumber(route.row[band.columnIndex]) ?? 0;
 
   if (base <= 0) {
-    return { cost: null, reason: `Faixa ${carrier} sem tarifa para a rota.` };
+    return {
+      cost: null,
+      reason: `Faixa ${carrier} sem tarifa para a rota.`,
+    };
   }
 
   if (band.isPerKgRate) {
@@ -1019,8 +1288,18 @@ function quoteWeightTable(
     bandRow,
     ["ADVALOREM", "AD VALOREM"],
   );
-  const grisFee = readFeeValue(route.row, bandRow, ["GRIS"]);
-  const tollFee = readFeeValue(route.row, bandRow, ["PEDAGIO"]);
+
+  const grisFee = readFeeValue(
+    route.row,
+    bandRow,
+    ["GRIS"],
+  );
+
+  const tollFee = readFeeValue(
+    route.row,
+    bandRow,
+    ["PEDAGIO"],
+  );
 
   let adValorem = adValoremFee.value;
   let gris = grisFee.value;
@@ -1033,21 +1312,43 @@ function quoteWeightTable(
           ? 0.002
           : 0.0025;
 
-    adValorem = getParameterFromGeneralities(rows, "ADV", fallback, true);
+    adValorem = getParameterFromGeneralities(
+      rows,
+      "ADV",
+      fallback,
+      true,
+    );
   }
 
   if (gris <= 0) {
-    const fallback = carrier === "Brasil Web" ? 0.0025 : 0.001;
-    gris = getParameterFromGeneralities(rows, "GRIS", fallback, true);
+    const fallback =
+      carrier === "Brasil Web" ? 0.0025 : 0.001;
+
+    gris = getParameterFromGeneralities(
+      rows,
+      "GRIS",
+      fallback,
+      true,
+    );
   }
 
   let toll = tollFee.value;
 
   if (toll <= 0 && !tollFee.included) {
     if (carrier === "Rodobrás") {
-      toll = getParameterFromGeneralities(rows, "PEDAGIO", 4.9, false);
+      toll = getParameterFromGeneralities(
+        rows,
+        "PEDAGIO",
+        4.9,
+        false,
+      );
     } else if (carrier === "Brasil Web") {
-      toll = getParameterFromGeneralities(rows, "PEDAGIO", 4, false);
+      toll = getParameterFromGeneralities(
+        rows,
+        "PEDAGIO",
+        4,
+        false,
+      );
     }
   }
 
@@ -1063,7 +1364,8 @@ function quoteWeightTable(
         invoiceValue * gris +
         tollCost,
     ),
-    reason: `Faixa de peso com fator de cubagem ${factor} kg/m³.`,
+    reason:
+      `Faixa de peso com fator de cubagem ${factor} kg/m³.`,
   };
 }
 
@@ -1096,30 +1398,41 @@ function quoteVenkon(
   }
 
   const bandRow = rows[table.headerIndex + 1] ?? [];
+
   const chargedWeight = Math.max(
     realWeightKg,
     cubicVolumeM3 * CUBAGE_FACTOR_DEFAULT,
   );
+
   const band = findWeightBand(bandRow, chargedWeight);
 
   if (!band) {
     return {
       cost: null,
-      reason: `Venkon sem faixa para ${chargedWeight.toFixed(2)} kg tarifários.`,
+      reason:
+        `Venkon sem faixa para ` +
+        `${chargedWeight.toFixed(2)} kg tarifários.`,
     };
   }
 
   let base = parseNumber(route.row[band.columnIndex]) ?? 0;
 
   if (base <= 0) {
-    return { cost: null, reason: "Tarifa Venkon zerada para a rota." };
+    return {
+      cost: null,
+      reason: "Tarifa Venkon zerada para a rota.",
+    };
   }
 
   if (band.isPerKgRate) {
     base *= chargedWeight;
   }
 
-  const adValoremColumn = findFeeColumn(bandRow, ["ADVALOREM"]);
+  const adValoremColumn = findFeeColumn(
+    bandRow,
+    ["ADVALOREM"],
+  );
+
   const grisColumn = findFeeColumn(bandRow, ["GRIS"]);
   const tollColumn = findFeeColumn(bandRow, ["PEDAGIO"]);
 
@@ -1127,10 +1440,12 @@ function quoteVenkon(
     adValoremColumn >= 0
       ? parsePercent(route.row[adValoremColumn], 0)
       : 0;
+
   const gris =
     grisColumn >= 0
       ? parsePercent(route.row[grisColumn], 0)
       : 0;
+
   const toll =
     tollColumn >= 0
       ? parseNumber(route.row[tollColumn]) ?? 0
@@ -1173,13 +1488,17 @@ function quoteModular(
   if (!route) {
     return {
       cost: null,
-      reason: `Sem tarifa Modular para ${uf} / ${destination}.`,
+      reason:
+        `Sem tarifa Modular para ${uf} / ${destination}.`,
     };
   }
 
   const subHeader = rows[table.headerIndex + 1] ?? [];
   const header = rows[table.headerIndex] ?? [];
-  const minimumColumn = findColumn(header, ["FREITEMINIMO"]);
+
+  // Mesma correção de grafia utilizada na Rodonaves.
+  const minimumColumn = findColumn(header, ["FRETEMINIMO"]);
+
   const minimum =
     minimumColumn >= 0
       ? parseNumber(route.row[minimumColumn]) ?? 0
@@ -1188,20 +1507,29 @@ function quoteModular(
   const categoryValues = new Map<string, number>();
 
   for (const item of shipment.items) {
-    const deposit = String(item.original.values["Depósito"] ?? "")
+    const deposit = String(
+      item.original.values["Depósito"] ?? "",
+    )
       .trim()
       .toUpperCase();
+
     const itemType =
       deposit === "B130" || deposit === "B412"
         ? "PECAS"
         : shipmentType;
+
     const description =
       item.original.values["Denominação de item"] ?? "";
-    const category = getCommercialCategory(itemType, description);
+
+    const category = getCommercialCategory(
+      itemType,
+      description,
+    );
 
     categoryValues.set(
       category,
-      (categoryValues.get(category) ?? 0) + item.invoiceValue,
+      (categoryValues.get(category) ?? 0) +
+        item.invoiceValue,
     );
   }
 
@@ -1224,7 +1552,9 @@ function quoteModular(
     if (!aliases) {
       return {
         cost: null,
-        reason: `A Modular não tem tarifa específica para a categoria ${category}.`,
+        reason:
+          "A Modular não tem tarifa específica para a " +
+          `categoria ${category}.`,
       };
     }
 
@@ -1233,7 +1563,8 @@ function quoteModular(
     if (columnIndex < 0) {
       return {
         cost: null,
-        reason: `Coluna Modular não localizada para ${category}.`,
+        reason:
+          `Coluna Modular não localizada para ${category}.`,
       };
     }
 
@@ -1250,20 +1581,30 @@ function quoteModular(
   }
 
   if (base <= 0) {
-    return { cost: null, reason: "Tarifa Modular sem valor aplicável." };
+    return {
+      cost: null,
+      reason: "Tarifa Modular sem valor aplicável.",
+    };
   }
 
   if (base < minimum) {
     base = minimum;
   }
 
-  const gris = getParameterFromGeneralities(rows, "GRIS", 0.0037, true);
+  const gris = getParameterFromGeneralities(
+    rows,
+    "GRIS",
+    0.0037,
+    true,
+  );
+
   const adValorem = getParameterFromGeneralities(
     rows,
     "SEGURO (ADV)",
     0.0015,
     true,
   );
+
   const toll = getParameterFromGeneralities(
     rows,
     "PEDAGIO FRACIONADO",
@@ -1279,7 +1620,8 @@ function quoteModular(
 
   return {
     cost: roundMoney(total),
-    reason: "Tarifa percentual por categoria, mínimo, GRIS, ADV e pedágio.",
+    reason:
+      "Tarifa percentual por categoria, mínimo, GRIS, ADV e pedágio.",
   };
 }
 
@@ -1312,22 +1654,40 @@ function quoteAneg(
   }
 
   const subHeader = rows[table.headerIndex + 1] ?? [];
-  const truckColumn = findColumn(subHeader, ["TRUCK"]);
-  const truckTollColumn = findColumn(subHeader, ["PEDAGIOTRUCK"]);
-  const trailerColumn = findColumn(subHeader, ["CARRETA"]);
-  const trailerTollColumn = findColumn(subHeader, ["PEDAGIOCARRETA"]);
 
-  const truckRateColumn = truckColumn >= 0 ? truckColumn : 4;
+  const truckColumn = findColumn(subHeader, ["TRUCK"]);
+  const truckTollColumn = findColumn(
+    subHeader,
+    ["PEDAGIOTRUCK"],
+  );
+
+  const trailerColumn = findColumn(subHeader, ["CARRETA"]);
+  const trailerTollColumn = findColumn(
+    subHeader,
+    ["PEDAGIOCARRETA"],
+  );
+
+  const truckRateColumn =
+    truckColumn >= 0 ? truckColumn : 4;
+
   const truckTollRateColumn =
     truckTollColumn >= 0 ? truckTollColumn : 5;
+
   const trailerRateColumn =
     trailerColumn >= 0 ? trailerColumn : 6;
+
   const trailerTollRateColumn =
     trailerTollColumn >= 0 ? trailerTollColumn : 7;
 
-  const truckRate = parseNumber(route.row[truckRateColumn]) ?? 0;
-  const truckToll = parseNumber(route.row[truckTollRateColumn]) ?? 0;
-  const trailerRate = parseNumber(route.row[trailerRateColumn]) ?? 0;
+  const truckRate =
+    parseNumber(route.row[truckRateColumn]) ?? 0;
+
+  const truckToll =
+    parseNumber(route.row[truckTollRateColumn]) ?? 0;
+
+  const trailerRate =
+    parseNumber(route.row[trailerRateColumn]) ?? 0;
+
   const trailerToll =
     parseNumber(route.row[trailerTollRateColumn]) ?? 0;
 
@@ -1337,12 +1697,14 @@ function quoteAneg(
     ANEG_GRIS_DEFAULT,
     true,
   );
+
   const adValorem = getParameterFromGeneralities(
     rows,
     "SEGURO - AD VALOREM",
     ANEG_ADV_DEFAULT,
     true,
   );
+
   const additionalInvoiceCost =
     invoiceValue * gris + invoiceValue * adValorem;
 
@@ -1381,14 +1743,16 @@ function quoteAneg(
   }
 
   const cost =
-    truckCost > 0 && (trailerCost <= 0 || truckCost <= trailerCost)
+    truckCost > 0 &&
+    (trailerCost <= 0 || truckCost <= trailerCost)
       ? truckCost
       : trailerCost;
 
   return {
     cost: roundMoney(cost),
     reason:
-      "Compara truck e carreta por capacidade; inclui pedágio, carregamento, GRIS e ADV.",
+      "Compara truck e carreta por capacidade; inclui " +
+      "pedágio, carregamento, GRIS e ADV.",
   };
 }
 
@@ -1479,7 +1843,9 @@ function getCarrierQuote(
   if (!matrixEligible) {
     return {
       cost: null,
-      reason: `Não elegível na matriz para ${shipmentType}, ${uf} / ${defaultDestination}.`,
+      reason:
+        `Não elegível na matriz para ${shipmentType}, ` +
+        `${uf} / ${defaultDestination}.`,
     };
   }
 
@@ -1491,7 +1857,8 @@ function getCarrierQuote(
       if (hasMissingWeight || hasMissingCubage) {
         return {
           cost: null,
-          reason: "Há item sem peso ou cubagem na base de materiais.",
+          reason:
+            "Há item sem peso ou cubagem na base de materiais.",
         };
       }
 
@@ -1512,7 +1879,11 @@ function getCarrierQuote(
         };
       }
 
-      const destination = getRteDestination(datasets, city, uf);
+      const destination = getRteDestination(
+        datasets,
+        city,
+        uf,
+      );
 
       if (!destination) {
         return {
@@ -1535,7 +1906,8 @@ function getCarrierQuote(
       if (hasMissingWeight || hasMissingCubage) {
         return {
           cost: null,
-          reason: "Há item sem peso ou cubagem na base de materiais.",
+          reason:
+            "Há item sem peso ou cubagem na base de materiais.",
         };
       }
 
@@ -1554,7 +1926,8 @@ function getCarrierQuote(
       if (hasMissingWeight || hasMissingCubage) {
         return {
           cost: null,
-          reason: "Há item sem peso ou cubagem na base de materiais.",
+          reason:
+            "Há item sem peso ou cubagem na base de materiais.",
         };
       }
 
@@ -1573,7 +1946,8 @@ function getCarrierQuote(
       if (hasMissingWeight || hasMissingCubage) {
         return {
           cost: null,
-          reason: "Há item sem peso ou cubagem na base de materiais.",
+          reason:
+            "Há item sem peso ou cubagem na base de materiais.",
         };
       }
 
@@ -1609,7 +1983,8 @@ function getCarrierQuote(
       if (hasMissingWeight || hasMissingCubage) {
         return {
           cost: null,
-          reason: "Há item sem peso ou cubagem na base de materiais.",
+          reason:
+            "Há item sem peso ou cubagem na base de materiais.",
         };
       }
 
@@ -1643,7 +2018,9 @@ export function calculateFreight(
     return {
       success: false,
       errors: [
-        "A base de materiais ativa não foi encontrada ou não contém as colunas Material, Peso Unitário KG e Cubagem Unitária (m³).",
+        "A base de materiais ativa não foi encontrada ou não " +
+          "contém as colunas Material, Peso Unitário KG e " +
+          "Cubagem Unitária (m³).",
       ],
     };
   }
@@ -1658,52 +2035,71 @@ export function calculateFreight(
       continue;
     }
 
-    const uf = String(firstItem.original.values.Região ?? "")
+    const uf = String(
+      firstItem.original.values.Região ?? "",
+    )
       .trim()
       .toUpperCase();
-    const city = String(firstItem.original.values.Cidade ?? "").trim();
+
+    const city = String(
+      firstItem.original.values.Cidade ?? "",
+    ).trim();
 
     const shipmentType = getShipmentType(shipment);
-    const defaultDestination = getDestinationByOfficialCapital(city, uf);
-    const metrics = getShipmentMetrics(shipment, materialMap);
+
+    const defaultDestination =
+      getDestinationByOfficialCapital(city, uf);
+
+    const metrics = getShipmentMetrics(
+      shipment,
+      materialMap,
+    );
+
     const currentCarrier = getCurrentCarrier(shipment);
 
     if (metrics.missingWeightItems > 0) {
       warnings.push(
-        `Remessa ${shipment.shipment}: ${metrics.missingWeightItems} item(ns) sem peso cadastrado na base de materiais.`,
+        `Remessa ${shipment.shipment}: ` +
+          `${metrics.missingWeightItems} item(ns) sem peso ` +
+          "cadastrado na base de materiais.",
       );
     }
 
     if (metrics.missingCubageItems > 0) {
       warnings.push(
-        `Remessa ${shipment.shipment}: ${metrics.missingCubageItems} item(ns) sem cubagem cadastrada na base de materiais.`,
+        `Remessa ${shipment.shipment}: ` +
+          `${metrics.missingCubageItems} item(ns) sem cubagem ` +
+          "cadastrada na base de materiais.",
       );
     }
 
-    const quotes: FreightCarrierQuote[] = FREIGHT_CARRIERS.map((carrier) => {
-      const quote = getCarrierQuote(
-        carrier,
-        datasets,
-        shipment,
-        shipmentType,
-        uf,
-        city,
-        defaultDestination,
-        metrics.realWeightKg,
-        metrics.cubicVolumeM3,
-        metrics.missingWeightItems,
-        metrics.missingCubageItems,
-      );
+    const quotes: FreightCarrierQuote[] =
+      FREIGHT_CARRIERS.map((carrier) => {
+        const quote = getCarrierQuote(
+          carrier,
+          datasets,
+          shipment,
+          shipmentType,
+          uf,
+          city,
+          defaultDestination,
+          metrics.realWeightKg,
+          metrics.cubicVolumeM3,
+          metrics.missingWeightItems,
+          metrics.missingCubageItems,
+        );
 
-      return {
-        carrier,
-        cost: quote.cost,
-        reason: quote.reason,
-      };
-    });
+        return {
+          carrier,
+          cost: quote.cost,
+          reason: quote.reason,
+        };
+      });
 
     const availableQuotes = quotes.filter(
-      (quote): quote is FreightCarrierQuote & { cost: number } =>
+      (
+        quote,
+      ): quote is FreightCarrierQuote & { cost: number } =>
         quote.cost !== null && quote.cost > 0,
     );
 
@@ -1720,7 +2116,9 @@ export function calculateFreight(
     const currentQuote =
       currentCarrier !== "MÚLTIPLAS" &&
       currentCarrier !== "NÃO IDENTIFICADA"
-        ? quotes.find((quote) => quote.carrier === currentCarrier)
+        ? quotes.find(
+            (quote) => quote.carrier === currentCarrier,
+          )
         : undefined;
 
     const currentCost =
@@ -1741,7 +2139,8 @@ export function calculateFreight(
       }
 
       if (potentialSavings > 0) {
-        potentialSavingsPercent = potentialSavings / currentCost;
+        potentialSavingsPercent =
+          potentialSavings / currentCost;
       }
     }
 

@@ -1,4 +1,10 @@
 import { useEffect, useState } from "react";
+import type { FormEvent } from "react";
+import {
+  setFreightDashboardControl,
+  getFreightDashboardControlHistory,
+} from "./lib/freightDashboardControls";
+import type { FreightDashboardControlEvent } from "./lib/freightDashboardControls";
 import {
   filterDashboardRecords,
   getFreightDashboardData,
@@ -102,7 +108,9 @@ function DashboardResults({
       >
         <article>
           <span>Mudanças confirmadas</span>
-          <strong>{summary.confirmedCount.toLocaleString("pt-BR")}</strong>
+          <strong>
+            {summary.confirmedCount.toLocaleString("pt-BR")}
+          </strong>
           <small>Remessas marcadas como “Fiz a mudança”</small>
         </article>
 
@@ -138,7 +146,8 @@ function DashboardResults({
             <p>
               As remessas entram nestes indicadores quando você registra
               “Fiz a mudança”. Pendências e mudanças não realizadas
-              permanecem fora das somas.
+              permanecem fora das somas. Remessas retiradas pelo
+              administrador também não são incluídas.
             </p>
           </div>
         </section>
@@ -154,14 +163,18 @@ function DashboardResults({
               <div className="freight-dashboard-bar-row">
                 <div className="freight-dashboard-bar-label">
                   <span>Transportadoras originais</span>
-                  <strong>{currency.format(summary.originalCost)}</strong>
+                  <strong>
+                    {currency.format(summary.originalCost)}
+                  </strong>
                 </div>
 
                 <div className="freight-dashboard-bar-track">
                   <div
                     className="freight-dashboard-bar original"
                     style={{
-                      width: `${(summary.originalCost / maximumCost) * 100}%`,
+                      width: `${
+                        (summary.originalCost / maximumCost) * 100
+                      }%`,
                     }}
                     aria-hidden="true"
                   />
@@ -171,14 +184,18 @@ function DashboardResults({
               <div className="freight-dashboard-bar-row">
                 <div className="freight-dashboard-bar-label">
                   <span>Transportadoras escolhidas</span>
-                  <strong>{currency.format(summary.chosenCost)}</strong>
+                  <strong>
+                    {currency.format(summary.chosenCost)}
+                  </strong>
                 </div>
 
                 <div className="freight-dashboard-bar-track">
                   <div
                     className="freight-dashboard-bar chosen"
                     style={{
-                      width: `${(summary.chosenCost / maximumCost) * 100}%`,
+                      width: `${
+                        (summary.chosenCost / maximumCost) * 100
+                      }%`,
                     }}
                     aria-hidden="true"
                   />
@@ -186,10 +203,13 @@ function DashboardResults({
               </div>
 
               <p className="freight-dashboard-comparison-note">
-                Economia de <strong>{currency.format(summary.savings)}</strong>
+                Economia de{" "}
+                <strong>{currency.format(summary.savings)}</strong>
                 {" · "}
                 Redução de{" "}
-                <strong>{percent.format(summary.reductionPercent)}</strong>
+                <strong>
+                  {percent.format(summary.reductionPercent)}
+                </strong>
               </p>
             </div>
           </section>
@@ -210,11 +230,8 @@ function DashboardResults({
                     <div className="freight-dashboard-bar-label">
                       <span>
                         {item.carrier}
-                        <small>
-                          {item.shipments} remessa(s)
-                        </small>
+                        <small>{item.shipments} remessa(s)</small>
                       </span>
-
                       <strong>{currency.format(item.savings)}</strong>
                     </div>
 
@@ -311,7 +328,9 @@ function DashboardResults({
                       <td>
                         {record.shipment.suggested_cost === null
                           ? "—"
-                          : currency.format(record.shipment.suggested_cost)}
+                          : currency.format(
+                              record.shipment.suggested_cost,
+                            )}
                       </td>
                       <td className="freight-dashboard-saving-cell">
                         {currency.format(
@@ -335,7 +354,400 @@ function DashboardResults({
   );
 }
 
-export default function FreightDashboard() {
+function DashboardReview({
+  data,
+  filters,
+  onChanged,
+}: {
+  data: FreightDashboardData;
+  filters: DashboardFilters;
+  onChanged: () => void;
+}) {
+  const [search, setSearch] = useState("");
+  const [mode, setMode] = useState("included");
+  const [page, setPage] = useState(1);
+  const [selected, setSelected] = useState<string | null>(null);
+  const [reason, setReason] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
+  const [events, setEvents] =
+    useState<FreightDashboardControlEvent[]>([]);
+  const [historyTotal, setHistoryTotal] = useState(0);
+  const [historyPage, setHistoryPage] = useState(1);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyError, setHistoryError] = useState("");
+
+  const controls = new Map(
+    data.controls.map((control) => [
+      control.shipment_code,
+      control,
+    ]),
+  );
+
+  const records = filterDashboardRecords(
+    { ...data, confirmed: data.allConfirmed },
+    filters,
+  )
+    .filter((record) =>
+      record.shipment_code.includes(search.trim()),
+    )
+    .filter((record) =>
+      mode === "excluded"
+        ? controls.get(record.shipment_code)?.excluded === true
+        : controls.get(record.shipment_code)?.excluded !== true,
+    );
+
+  const pages = Math.max(1, Math.ceil(records.length / 25));
+  const currentPage = Math.min(page, pages);
+  const visible = records.slice(
+    (currentPage - 1) * 25,
+    currentPage * 25,
+  );
+
+  const control = selected ? controls.get(selected) : undefined;
+
+  useEffect(() => {
+    let active = true;
+
+    setEvents([]);
+    setHistoryError("");
+    setHistoryTotal(0);
+
+    if (!selected) return;
+
+    setHistoryLoading(true);
+
+    getFreightDashboardControlHistory(selected, historyPage)
+      .then((result) => {
+        if (active) {
+          setEvents(result.events);
+          setHistoryTotal(result.total);
+        }
+      })
+      .catch((err) => {
+        if (active) {
+          setHistoryError(
+            err instanceof Error
+              ? err.message
+              : "Falha ao consultar o histórico.",
+          );
+        }
+      })
+      .finally(() => {
+        if (active) setHistoryLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [selected, historyPage]);
+
+  async function save(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!selected || busy) return;
+
+    setBusy(true);
+    setError("");
+
+    try {
+      await setFreightDashboardControl({
+        shipmentCode: selected,
+        excluded: !control?.excluded,
+        expectedRevision: control?.revision ?? 0,
+        reason,
+      });
+
+      setSelected(null);
+      onChanged();
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Não foi possível salvar a revisão.",
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <section className="panel">
+      <div className="panel-heading">
+        <h2>Revisão administrativa</h2>
+        <span>Confirmações no período selecionado</span>
+      </div>
+
+      <div className="freight-dashboard-filter-body">
+        <p className="freight-dashboard-help">
+          A confirmação da equipe é preservada. A retirada vale para
+          o número da remessa, inclusive em novas análises.
+        </p>
+
+        <div className="freight-dashboard-filters">
+          <label>
+            Exibir
+            <select
+              value={mode}
+              disabled={busy}
+              onChange={(event) => {
+                setMode(event.target.value);
+                setPage(1);
+              }}
+            >
+              <option value="included">
+                Incluídas nos indicadores
+              </option>
+              <option value="excluded">
+                Retiradas dos indicadores
+              </option>
+            </select>
+          </label>
+
+          <label>
+            Buscar remessa
+            <input
+              type="search"
+              value={search}
+              disabled={busy}
+              onChange={(event) => {
+                setSearch(event.target.value);
+                setPage(1);
+              }}
+            />
+          </label>
+        </div>
+
+        <p className="freight-dashboard-help">
+          {records.length} remessa(s) · Página {currentPage} de {pages}
+        </p>
+
+        <div className="freight-dashboard-table-scroll">
+          <table className="freight-dashboard-table">
+            <thead>
+              <tr>
+                <th>Remessa</th>
+                <th>Data</th>
+                <th>Transportadora escolhida</th>
+                <th>Economia</th>
+                <th>Revisão</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {visible.map((record) => (
+                <tr key={record.id}>
+                  <td>{record.shipment_code}</td>
+                  <td>{formatDate(record.shipment.shipment_date)}</td>
+                  <td>{record.shipment.suggested_carrier}</td>
+                  <td>
+                    {currency.format(
+                      (record.shipment.current_cost ?? 0) -
+                        (record.shipment.suggested_cost ?? 0),
+                    )}
+                  </td>
+                  <td>
+                    <button
+                      className="secondary-button"
+                      type="button"
+                      disabled={busy}
+                      onClick={() => {
+                        setSelected(record.shipment_code);
+                        setReason("");
+                        setError("");
+                        setHistoryPage(1);
+                      }}
+                    >
+                      {controls.get(record.shipment_code)?.excluded
+                        ? "Restaurar / histórico"
+                        : "Retirar / histórico"}
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {records.length === 0 && (
+          <p className="freight-dashboard-help">
+            Nenhuma confirmação encontrada neste filtro.
+          </p>
+        )}
+
+        <div className="freight-review-actions">
+          <button
+            type="button"
+            className="secondary-button"
+            disabled={busy || currentPage <= 1}
+            onClick={() => setPage(currentPage - 1)}
+          >
+            Anterior
+          </button>
+
+          <button
+            type="button"
+            className="secondary-button"
+            disabled={busy || currentPage >= pages}
+            onClick={() => setPage(currentPage + 1)}
+          >
+            Próxima
+          </button>
+        </div>
+
+        {selected && (
+          <div className="freight-review-editor">
+            <h3>Remessa {selected}</h3>
+
+            <p>
+              {control?.excluded
+                ? "Esta remessa está retirada dos indicadores."
+                : "Esta remessa está incluída nos indicadores."}
+            </p>
+
+            {control && (
+              <p className="freight-review-reason">
+                Último motivo: {control.reason}
+                <br />
+                Registrado em {formatDateTime(control.changed_at)}
+              </p>
+            )}
+
+            <form onSubmit={(event) => void save(event)}>
+              <label htmlFor="dashboard-review-reason">
+                Motivo da{" "}
+                {control?.excluded ? "restauração" : "retirada"}
+              </label>
+
+              <textarea
+                id="dashboard-review-reason"
+                required
+                maxLength={2000}
+                rows={3}
+                disabled={busy}
+                value={reason}
+                onChange={(event) => setReason(event.target.value)}
+              />
+
+              <p className="freight-dashboard-help">
+                A ação vale para todas as contas e análises com este
+                número de remessa. A restauração só inclui confirmações
+                válidas no período consultado.
+              </p>
+
+              {error && (
+                <p className="freight-dashboard-error" role="alert">
+                  {error}
+                </p>
+              )}
+
+              <div className="freight-review-actions">
+                <button
+                  className="primary-button"
+                  type="submit"
+                  disabled={busy || !reason.trim()}
+                >
+                  {busy
+                    ? "Salvando…"
+                    : control?.excluded
+                      ? "Confirmar restauração"
+                      : "Confirmar retirada"}
+                </button>
+
+                <button
+                  className="secondary-button"
+                  type="button"
+                  disabled={busy}
+                  onClick={() => setSelected(null)}
+                >
+                  Cancelar
+                </button>
+              </div>
+            </form>
+
+            <h4>Histórico administrativo</h4>
+
+            {historyLoading ? (
+              <p role="status">Carregando histórico…</p>
+            ) : historyError ? (
+              <p role="alert">{historyError}</p>
+            ) : (
+              <>
+                {!events.length && (
+                  <p>Nenhuma retirada ou restauração registrada.</p>
+                )}
+
+                <ol>
+                  {events.map((item) => (
+                    <li
+                      key={item.id}
+                      className="freight-review-reason"
+                    >
+                      <strong>
+                        {item.new_excluded ? "Retirada" : "Restaurada"}
+                      </strong>
+                      {" · "}
+                      {formatDateTime(item.changed_at)}
+                      <br />
+                      {item.reason}
+                      <br />
+                      <small>
+                        Administrador responsável:{" "}
+                        {data.accountNames[item.changed_by] ??
+                          "Administrador"}
+                      </small>
+                    </li>
+                  ))}
+                </ol>
+
+                {historyTotal > 25 && (
+                  <div className="freight-review-actions">
+                    <button
+                      type="button"
+                      className="secondary-button"
+                      disabled={historyPage <= 1}
+                      onClick={() =>
+                        setHistoryPage((value) => value - 1)
+                      }
+                    >
+                      Anteriores
+                    </button>
+
+                    <span>
+                      Página {historyPage} de{" "}
+                      {Math.ceil(historyTotal / 25)}
+                    </span>
+
+                    <button
+                      type="button"
+                      className="secondary-button"
+                      disabled={historyPage * 25 >= historyTotal}
+                      onClick={() =>
+                        setHistoryPage((value) => value + 1)
+                      }
+                    >
+                      Próximos
+                    </button>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
+
+export default function FreightDashboard({
+  role,
+}: {
+  role: "admin" | "employee";
+}) {
+  const [scope, setScope] =
+    useState<"official" | "tests">("official");
+
   const [filters, setFilters] = useState<DashboardFilters>(() => ({
     period: "all",
     startDate: todayString(),
@@ -344,10 +756,13 @@ export default function FreightDashboard() {
 
   const [request, setRequest] = useState(() => ({
     filters,
+    scope,
     revision: 0,
   }));
 
-  const [data, setData] = useState<FreightDashboardData | null>(null);
+  const [data, setData] =
+    useState<FreightDashboardData | null>(null);
+
   const [summary, setSummary] =
     useState<FreightDashboardSummary | null>(null);
 
@@ -364,13 +779,11 @@ export default function FreightDashboard() {
       setError("");
 
       try {
-        const loaded = await getFreightDashboardData();
-
+        const loaded = await getFreightDashboardData(request.scope);
         const records = filterDashboardRecords(
           loaded,
           request.filters,
         );
-
         const calculated = summarizeFreightDashboard(records);
 
         if (active) {
@@ -387,9 +800,7 @@ export default function FreightDashboard() {
           );
         }
       } finally {
-        if (active) {
-          setIsLoading(false);
-        }
+        if (active) setIsLoading(false);
       }
     }
 
@@ -427,13 +838,13 @@ export default function FreightDashboard() {
 
     setRequest((current) => ({
       filters: { ...filters },
+      scope,
       revision: current.revision + 1,
     }));
   }
 
   const showStart =
     filters.period === "date" || filters.period === "range";
-
   const showEnd = filters.period === "range";
 
   return (
@@ -452,6 +863,26 @@ export default function FreightDashboard() {
               applyFilters();
             }}
           >
+            {role === "admin" && (
+              <label>
+                Consultar
+                <select
+                  value={scope}
+                  disabled={isLoading}
+                  onChange={(event) =>
+                    setScope(
+                      event.target.value as "official" | "tests",
+                    )
+                  }
+                >
+                  <option value="official">
+                    Resultados oficiais — equipe
+                  </option>
+                  <option value="tests">Meus testes</option>
+                </select>
+              </label>
+            )}
+
             <label>
               Período
               <select
@@ -559,7 +990,9 @@ export default function FreightDashboard() {
           <div className="freight-dashboard-context">
             <div>
               <strong>
-                Exibindo: {getPeriodDescription(request.filters)}
+                {data.scopeLabel}
+                {" · "}
+                {getPeriodDescription(request.filters)}
               </strong>
 
               <span>
@@ -582,11 +1015,44 @@ export default function FreightDashboard() {
             </div>
 
             {updatedAt && (
-              <span>Atualizado em {formatDateTime(updatedAt)}</span>
+              <span>
+                Atualizado em {formatDateTime(updatedAt)}
+              </span>
             )}
           </div>
 
+          {data.duplicateCount > 0 && (
+            <p className="freight-dashboard-help">
+              {data.duplicateCount} confirmação(ões) repetida(s)
+              entre contas não foram somadas novamente. Para cada
+              remessa, foi considerada a confirmação mais recente
+              das contas consultadas.
+            </p>
+          )}
+
+          {request.scope === "tests" && (
+            <p className="freight-dashboard-help">
+              Estes registros são da sua conta e não entram nos
+              resultados oficiais da equipe. A retirada administrativa
+              é feita na visão de resultados oficiais.
+            </p>
+          )}
+
           <DashboardResults summary={summary} />
+
+          {role === "admin" && request.scope === "official" && (
+            <DashboardReview
+              key={updatedAt}
+              data={data}
+              filters={request.filters}
+              onChanged={() =>
+                setRequest((current) => ({
+                  ...current,
+                  revision: current.revision + 1,
+                }))
+              }
+            />
+          )}
 
           <p className="freight-dashboard-help">
             Os valores usam as cotações preservadas na análise e a sua

@@ -353,8 +353,6 @@ html[data-theme="dark"] .freight-dashboard {
   font-weight: 700;
 }
 
-/* Mantém o destaque verde acima das regras gerais de Theme.css */
-
 html[data-theme="dark"]
   .main-content
   .freight-dashboard-table
@@ -404,6 +402,61 @@ html[data-theme="dark"]
 .freight-dashboard button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+/* Revisão administrativa */
+
+.freight-review-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.freight-review-actions .secondary-button,
+.freight-dashboard-table .secondary-button {
+  margin-top: 0;
+}
+
+.freight-review-editor {
+  margin-top: 24px;
+  padding: 20px;
+  border: 1px solid var(--dashboard-border);
+  border-radius: 12px;
+  background: var(--dashboard-surface);
+  color: var(--dashboard-text);
+}
+
+.freight-review-editor label {
+  display: block;
+  margin-bottom: 8px;
+}
+
+.freight-review-editor textarea {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid var(--dashboard-input-border);
+  border-radius: 9px;
+  background: var(--dashboard-surface);
+  color: var(--dashboard-text);
+  font: inherit;
+  resize: vertical;
+}
+
+.freight-review-editor textarea:focus-visible {
+  outline: 2px solid var(--dashboard-focus);
+  outline-offset: 2px;
+}
+
+.freight-review-reason {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  line-height: 1.7;
+}
+
+.freight-review-editor li {
+  margin-bottom: 15px;
 }
 
 /* Responsividade */

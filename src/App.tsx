@@ -54,7 +54,7 @@ export default function App({ role }: AppProps) {
   function renderPage() {
     switch (currentPage.id) {
       case "dashboard":
-        return <FreightDashboard />;
+        return <FreightDashboard role={role} />;
 
       case "simulation":
         return <NewSimulation />;

@@ -1,5 +1,9 @@
 import { supabase } from "./supabase";
-import { getFreightHistory } from "./freightHistory";
+import {
+  getFreightReportingAccounts,
+  getFreightDashboardControls,
+} from "./freightDashboardControls";
+import type { FreightDashboardControl } from "./freightDashboardControls";
 import type { FreightValidationRecord } from "./freightValidations";
 
 const READ_PAGE_SIZE = 500;
@@ -21,6 +25,11 @@ export type DashboardFilters = {
 
 export type FreightDashboardData = {
   confirmed: FreightValidationRecord[];
+  allConfirmed: FreightValidationRecord[];
+  controls: FreightDashboardControl[];
+  scopeLabel: string;
+  accountNames: Record<string, string>;
+  duplicateCount: number;
   latestRunId: string | null;
   latestRunCreatedAt: string | null;
   availableStartDate: string | null;
@@ -91,8 +100,8 @@ function validateDate(value: string): void {
   }
 
   const [year, month, day] = value.split("-").map(Number);
-
   const date = new Date(0);
+
   date.setUTCFullYear(year, month - 1, day);
   date.setUTCHours(0, 0, 0, 0);
 
@@ -109,9 +118,11 @@ function toCents(value: number): number {
   return Math.round(value * 100);
 }
 
-async function getConfirmedRecords(): Promise<
-  FreightValidationRecord[]
-> {
+async function getConfirmedRecords(
+  ownerIds: string[],
+): Promise<FreightValidationRecord[]> {
+  if (!ownerIds.length) return [];
+
   const records: FreightValidationRecord[] = [];
   let offset = 0;
 
@@ -120,6 +131,7 @@ async function getConfirmedRecords(): Promise<
       .from("freight_shipment_decisions")
       .select(CONFIRMED_COLUMNS)
       .eq("status", "applied")
+      .in("created_by", ownerIds)
       .order("id", { ascending: true })
       .range(offset, offset + READ_PAGE_SIZE - 1);
 
@@ -132,15 +144,11 @@ async function getConfirmedRecords(): Promise<
     const batch =
       (data ?? []) as unknown as FreightValidationRecord[];
 
-    if (batch.length === 0) {
-      break;
-    }
+    if (batch.length === 0) break;
 
     records.push(...batch);
     offset += batch.length;
   }
-
-  const seen = new Set<string>();
 
   for (const record of records) {
     const shipment = record.shipment;
@@ -174,34 +182,112 @@ async function getConfirmedRecords(): Promise<
     }
 
     validateDate(shipment.shipment_date);
-
-    if (seen.has(record.shipment_code)) {
-      throw new Error(
-        "A consulta retornou uma remessa repetida. Atualize o dashboard.",
-      );
-    }
-
-    seen.add(record.shipment_code);
   }
 
   return records;
 }
 
 /**
- * Busca somente decisões confirmadas e identifica
- * a análise salva mais recentemente.
- *
+ * Consulta as confirmações preservadas no banco.
  * Nenhuma tarifa é recalculada nesta consulta.
  */
-export async function getFreightDashboardData(): Promise<
-  FreightDashboardData
-> {
-  const [confirmed, history] = await Promise.all([
-    getConfirmedRecords(),
-    getFreightHistory({ page: 1 }),
-  ]);
+export async function getFreightDashboardData(
+  scope: "official" | "tests" = "official",
+): Promise<FreightDashboardData> {
+  const { data: auth, error: authError } =
+    await supabase.auth.getUser();
 
-  const latestRun = history.runs[0];
+  if (authError || !auth.user) {
+    throw new Error("Entre novamente para consultar o dashboard.");
+  }
+
+  const { data: profile, error: profileError } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", auth.user.id)
+    .single();
+
+  if (
+    profileError ||
+    !profile ||
+    !["admin", "employee"].includes(profile.role)
+  ) {
+    throw new Error("Não foi possível verificar seu perfil.");
+  }
+
+  const admin = profile.role === "admin";
+  const accounts = admin ? await getFreightReportingAccounts() : [];
+
+  const accountNames = Object.fromEntries(
+    accounts.map((account) => [account.id, account.display_name]),
+  );
+
+  let ownerIds = [auth.user.id];
+  let scopeLabel = "Resultados da equipe";
+
+  if (admin && scope === "official") {
+    ownerIds = accounts
+      .filter((account) => account.role === "employee")
+      .map((account) => account.id);
+
+    scopeLabel = "Resultados oficiais — equipe";
+  } else if (admin) {
+    scopeLabel = "Meus testes — fora dos resultados oficiais";
+  }
+
+  let latestRun: { id: string; created_at: string } | undefined;
+
+  if (ownerIds.length) {
+    const { data, error } = await supabase
+      .from("freight_simulation_runs")
+      .select("id, created_at")
+      .in("created_by", ownerIds)
+      .order("created_at", { ascending: false })
+      .order("id", { ascending: false })
+      .limit(1);
+
+    if (error) {
+      throw new Error(
+        `Não foi possível consultar a última análise: ${error.message}`,
+      );
+    }
+
+    latestRun = data?.[0];
+  }
+
+  const raw = await getConfirmedRecords(ownerIds);
+
+  // Uma remessa entra uma única vez.
+  // Entre contas consultadas, prevalece a confirmação mais recente.
+  const unique = new Map<string, FreightValidationRecord>();
+
+  const ordered = [...raw].sort(
+    (a, b) =>
+      (b.decided_at ?? "").localeCompare(a.decided_at ?? "") ||
+      b.id.localeCompare(a.id),
+  );
+
+  for (const record of ordered) {
+    if (!unique.has(record.shipment_code)) {
+      unique.set(record.shipment_code, record);
+    }
+  }
+
+  const allConfirmed = [...unique.values()];
+
+  const controls = await getFreightDashboardControls(
+    allConfirmed.map((record) => record.shipment_code),
+  );
+
+  const excluded = new Set(
+    controls
+      .filter((control) => control.excluded)
+      .map((control) => control.shipment_code),
+  );
+
+  const confirmed = allConfirmed.filter(
+    (record) => !excluded.has(record.shipment_code),
+  );
 
   const dates = confirmed
     .map((record) => record.shipment.shipment_date)
@@ -209,6 +295,11 @@ export async function getFreightDashboardData(): Promise<
 
   return {
     confirmed,
+    allConfirmed,
+    controls,
+    scopeLabel,
+    accountNames,
+    duplicateCount: raw.length - allConfirmed.length,
     latestRunId: latestRun?.id ?? null,
     latestRunCreatedAt: latestRun?.created_at ?? null,
     availableStartDate: dates[0] ?? null,
@@ -218,9 +309,8 @@ export async function getFreightDashboardData(): Promise<
 
 /**
  * Os períodos usam a data da remessa.
- *
- * "Última análise" considera as decisões confirmadas
- * vinculadas especificamente à análise mais recente.
+ * "Última análise" considera as confirmações vinculadas
+ * especificamente à análise mais recente.
  */
 export function filterDashboardRecords(
   data: FreightDashboardData,
@@ -233,8 +323,7 @@ export function filterDashboardRecords(
   if (filters.period === "latest") {
     return data.latestRunId
       ? data.confirmed.filter(
-          (record) =>
-            record.shipment.run_id === data.latestRunId,
+          (record) => record.shipment.run_id === data.latestRunId,
         )
       : [];
   }
@@ -270,9 +359,9 @@ export function filterDashboardRecords(
       break;
 
     case "week": {
-      // Semana de segunda-feira a domingo.
       const monday = new Date(today);
       const daysSinceMonday = (today.getDay() + 6) % 7;
+
       monday.setDate(today.getDate() - daysSinceMonday);
 
       const sunday = new Date(monday);
@@ -307,14 +396,13 @@ export function filterDashboardRecords(
 
   return data.confirmed.filter((record) => {
     const date = record.shipment.shipment_date;
-
     return date >= startDate && date <= endDate;
   });
 }
 
 /**
- * Calcula os indicadores usando valores em centavos,
- * para evitar diferenças de soma com casas decimais.
+ * Soma os valores em centavos para evitar diferenças
+ * causadas por operações com casas decimais.
  */
 export function summarizeFreightDashboard(
   records: FreightValidationRecord[],
@@ -357,7 +445,6 @@ export function summarizeFreightDashboard(
     chosenCents += chosen;
 
     const carrier = shipment.suggested_carrier;
-
     const carrierTotal = carriers.get(carrier) ?? {
       savingsCents: 0,
       shipments: 0,
@@ -368,7 +455,6 @@ export function summarizeFreightDashboard(
     carriers.set(carrier, carrierTotal);
 
     const date = shipment.shipment_date;
-
     const dateTotal = dates.get(date) ?? {
       savingsCents: 0,
       shipments: 0,
@@ -386,11 +472,8 @@ export function summarizeFreightDashboard(
     originalCost: originalCents / 100,
     chosenCost: chosenCents / 100,
     savings: savingsCents / 100,
-
     reductionPercent:
-      originalCents > 0
-        ? savingsCents / originalCents
-        : 0,
+      originalCents > 0 ? savingsCents / originalCents : 0,
 
     byCarrier: Array.from(carriers.entries())
       .map(([carrier, value]) => ({

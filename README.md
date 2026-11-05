@@ -1,6 +1,6 @@
-<div align="center">
+<div align="left">
 
-# 🚚 Simulador de Frete
+# Simulador de Frete
 
 ### Compare custos. Registre decisões. Acompanhe a economia.
 
@@ -11,11 +11,6 @@ Manual de utilização · CD Extrema
 **Acesso pelo navegador · Conta da equipe e administrador · Tema claro e escuro**
 
 </div>
-
----
-
-> **Situação:** em validação final para uso operacional.  
-> O endereço acima ficará disponível após a conclusão da publicação no GitHub Pages.
 
 ## 🧭 Navegue pelo manual
 

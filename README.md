@@ -8,8 +8,6 @@ Manual de utilização · CD Extrema
 
 [**🌐 Acessar o sistema**](https://rafaslivka.github.io/simulador-de-frete/)
 
-**Acesso pelo navegador · Conta da equipe e administrador · Tema claro e escuro**
-
 </div>
 
 ## 🧭 Navegue pelo manual
